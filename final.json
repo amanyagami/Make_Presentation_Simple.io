@@ -1,0 +1,299 @@
+{
+  "slides": [
+    {
+      "id": "slide1",
+      "order": 1,
+      "type": "content",
+      "title": "Mahalanobis Distance for Robust Out-of-Distribution Detection",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Introduces the core method: Mahalanobis distance-based confidence scoring for detecting out-of-distribution (OOD) samples in neural networks.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Problem Statement",
+          "content": "Neural networks often misclassify out-of-distribution (OOD) samples as in-distribution, leading to unreliable predictions."
+        },
+        {
+          "number": 2,
+          "heading": "Proposed Solution",
+          "content": "Introduces a Mahalanobis distance-based confidence score to quantify how far a sample is from the learned distribution."
+        },
+        {
+          "number": 3,
+          "heading": "Key Insight",
+          "content": "Mahalanobis distance captures the covariance structure of the data, making it more robust than Euclidean distance for detecting OOD samples."
+        },
+        {
+          "number": 4,
+          "heading": "Impact",
+          "content": "This method improves detection accuracy and robustness, especially under challenging conditions like limited data or adversarial attacks."
+        }
+      ]
+    },
+    {
+      "id": "slide2",
+      "order": 2,
+      "type": "image",
+      "title": "Feature Visualization and Performance Comparison",
+      "subtitle": null,
+      "image_ref": "/uploads/figures/c213956560694380ab79f3fd00101d96_figure1.png",
+      "notes": "Figure 1 shows feature visualization, classification accuracy, and ROC curves for ResNet. The Mahalanobis method outperforms Softmax and Euclidean distance.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Feature Visualization (a)",
+          "content": "t-SNE visualization shows clear separation of classes, indicating the model learns distinct feature representations."
+        },
+        {
+          "number": 2,
+          "heading": "Classification Accuracy (b)",
+          "content": "Mahalanobis achieves higher accuracy on CIFAR-100 and SVHN, demonstrating its effectiveness in handling complex data."
+        },
+        {
+          "number": 3,
+          "heading": "ROC Curves (c)",
+          "content": "Mahalanobis has the highest TPR at low FPR, indicating superior OOD detection capability compared to Softmax and Euclidean."
+        },
+        {
+          "number": 4,
+          "heading": "Impact",
+          "content": "The method is robust and effective across different datasets, providing a strong baseline for OOD detection."
+        }
+      ]
+    },
+    {
+      "id": "slide3",
+      "order": 3,
+      "type": "content",
+      "title": "Algorithm for Mahalanobis Distance Computation",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Algorithm 1 details the computation of the Mahalanobis distance-based confidence score for a test sample.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Input",
+          "content": "The algorithm takes a test sample, logistic regression weights, noise, and Gaussian distribution parameters."
+        },
+        {
+          "number": 2,
+          "heading": "Process",
+          "content": "For each layer, it finds the closest class, adds noise to the sample, and computes a confidence score based on the Mahalanobis distance."
+        },
+        {
+          "number": 3,
+          "heading": "Output",
+          "content": "Returns a confidence score for the test sample, which is the weighted sum of scores from all layers."
+        },
+        {
+          "number": 4,
+          "heading": "Impact",
+          "content": "This algorithm provides a principled way to quantify uncertainty and detect OOD samples using the model's internal representations."
+        }
+      ]
+    },
+    {
+      "id": "slide4",
+      "order": 4,
+      "type": "image",
+      "title": "Class-Incremental Learning Algorithm",
+      "subtitle": null,
+      "image_ref": "/uploads/figures/c213956560694380ab79f3fd00101d96_figure2.png",
+      "notes": "Algorithm 2 shows how to update the Mahalanobis distance classifier for class-incremental learning, allowing the model to learn new classes without forgetting old ones.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Input",
+          "content": "The algorithm takes a new class's samples, along with the current mean and covariance of all classes."
+        },
+        {
+          "number": 2,
+          "heading": "Update Process",
+          "content": "Computes the new class mean and covariance, then updates the shared covariance matrix to include the new class."
+        },
+        {
+          "number": 3,
+          "heading": "Output",
+          "content": "Returns the updated mean and covariance for all classes, enabling the model to adapt to new classes."
+        },
+        {
+          "number": 4,
+          "heading": "Impact",
+          "content": "This algorithm enables the model to learn new classes incrementally while maintaining performance on previously learned classes."
+        }
+      ]
+    },
+    {
+      "id": "slide5",
+      "order": 5,
+      "type": "content",
+      "title": "Performance Comparison and Validation",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Table 1 and Table 2 compare the proposed method with baselines and show its superior performance under various conditions.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Table 1: Baseline Comparison",
+          "content": "The Mahalanobis method outperforms ODIN and baseline methods in TNR, AUROC, and detection accuracy for both in-distribution and out-of-distribution data."
+        },
+        {
+          "number": 2,
+          "heading": "Table 2: Validation Scenarios",
+          "content": "The method performs well under extreme conditions, including small training data and random labels, showing robustness."
+        },
+        {
+          "number": 3,
+          "heading": "Key Metrics",
+          "content": "High TNR (True Negative Rate) and AUROC scores indicate the method is effective at distinguishing OOD samples."
+        },
+        {
+          "number": 4,
+          "heading": "Impact",
+          "content": "The method is not only accurate but also robust, making it suitable for real-world applications with noisy or limited data."
+        }
+      ]
+    },
+    {
+      "id": "slide6",
+      "order": 6,
+      "type": "image",
+      "title": "Performance Under Extreme Conditions",
+      "subtitle": null,
+      "image_ref": "/uploads/figures/c213956560694380ab79f3fd00101d96_figure3.png",
+      "notes": "Figure 3 shows the performance of the method under extreme scenarios: small training data and random labels.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Small Training Data (a)",
+          "content": "The method maintains high AUROC even with very limited training data, outperforming baselines."
+        },
+        {
+          "number": 2,
+          "heading": "Random Labels (b)",
+          "content": "The method is robust to random labels, maintaining high performance compared to baselines."
+        },
+        {
+          "number": 3,
+          "heading": "Impact",
+          "content": "This demonstrates the method's resilience to data scarcity and label noise, making it practical for real-world deployment."
+        },
+        {
+          "number": 4,
+          "heading": "Conclusion",
+          "content": "The method is highly effective and robust, providing reliable OOD detection under challenging conditions."
+        }
+      ]
+    },
+    {
+      "id": "slide7",
+      "order": 7,
+      "type": "content",
+      "title": "Comparison with Other Methods",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Table 3 compares the method with other approaches for detecting known and unknown attacks.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Attack Detection",
+          "content": "The method achieves high AUROC scores for both known and unknown attacks, outperforming other methods."
+        },
+        {
+          "number": 2,
+          "heading": "Feature Ensemble",
+          "content": "Using feature ensemble and input pre-processing further improves performance, especially for unknown attacks."
+        },
+        {
+          "number": 3,
+          "heading": "Impact",
+          "content": "The method is effective at detecting adversarial attacks, making it suitable for security-critical applications."
+        },
+        {
+          "number": 4,
+          "heading": "Conclusion",
+          "content": "The method provides a comprehensive solution for OOD detection, including robustness to adversarial attacks."
+        }
+      ]
+    },
+    {
+      "id": "slide8",
+      "order": 8,
+      "type": "image",
+      "title": "Class-Incremental Learning Results",
+      "subtitle": null,
+      "image_ref": "/uploads/figures/c213956560694380ab79f3fd00101d96_figure4.png",
+      "notes": "Figure 4 shows the performance of the method in class-incremental learning on CIFAR-100 and ImageNet datasets.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "AUC vs. Number of Classes (a)",
+          "content": "The method maintains high AUC as new classes are added, outperforming Softmax and Euclidean distance."
+        },
+        {
+          "number": 2,
+          "heading": "Base Class Accuracy (b)",
+          "content": "The method preserves high base class accuracy even as new classes are added, indicating good generalization."
+        },
+        {
+          "number": 3,
+          "heading": "Impact",
+          "content": "The method is effective in class-incremental learning, maintaining performance on old classes while learning new ones."
+        },
+        {
+          "number": 4,
+          "heading": "Conclusion",
+          "content": "The method is suitable for lifelong learning scenarios, where models need to learn new classes without forgetting old ones."
+        }
+      ]
+    },
+    {
+      "id": "slide9",
+      "order": 9,
+      "type": "content",
+      "title": "Summary and Conclusion",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "The Mahalanobis distance-based method is a robust and effective solution for OOD detection and class-incremental learning.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Key Contributions",
+          "content": "Proposed a Mahalanobis distance-based confidence score for OOD detection and a method for class-incremental learning."
+        },
+        {
+          "number": 2,
+          "heading": "Performance",
+          "content": "Outperforms existing methods in accuracy, robustness, and generalization under various conditions."
+        },
+        {
+          "number": 3,
+          "heading": "Applications",
+          "content": "Suitable for real-world applications requiring reliable OOD detection, such as security and autonomous systems."
+        },
+        {
+          "number": 4,
+          "heading": "Future Work",
+          "content": "Further research can explore integrating the method with other techniques for even better performance."
+        }
+      ]
+    },
+    {
+      "id": "slide10",
+      "order": 10,
+      "type": "content",
+      "title": "Thank You",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Thank you for your attention. Questions?",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Thank You",
+          "content": "Thank you for your attention. We appreciate your time and interest in our work."
+        }
+      ]
+    }
+  ]
+}

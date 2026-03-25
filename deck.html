@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Deck Builder — Enhanced UI</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #f7fbff;
+    --muted: #6b7280;
+    --text: #0f172a;
+    --accent: #2563eb;
+    --accent-2: #06b6d4;
+    --card: #ffffff;
+    --border: #e6eefc;
+    --soft: #f3f8ff;
+    --radius: 12px;
+    --glass: rgba(255,255,255,0.6);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    color:var(--text);
+    background:linear-gradient(180deg,var(--bg) 0%, #ffffff 100%);
+    -webkit-font-smoothing:antialiased;
+    padding:28px;
+  }
+
+  .wrap{max-width:1100px;margin:0 auto}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+  .brand{display:flex;gap:12px;align-items:center}
+  .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 8px 20px rgba(37,99,235,0.12)}
+  h1{font-size:1.05rem;margin:0;font-weight:600}
+  .muted{color:var(--muted);font-size:0.9rem}
+
+  .grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+
+  .card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:18px;
+    border:1px solid var(--border);
+    box-shadow:0 10px 30px rgba(16,24,40,0.04);
+  }
+
+  /* stepper / intro */
+  .intro {
+    display:flex;
+    gap:12px;
+    align-items:center;
+  }
+  .steps {
+    display:flex;
+    gap:10px;
+    align-items:center;
+    background: linear-gradient(90deg, rgba(37,99,235,0.06), rgba(6,182,212,0.03));
+    padding:10px;
+    border-radius:10px;
+    border:1px solid rgba(37,99,235,0.04);
+  }
+  .step {
+    min-width:140px;
+    padding:10px 12px;
+    border-radius:10px;
+    background:transparent;
+    color:var(--muted);
+    display:flex;
+    gap:10px;
+    align-items:center;
+    transition:transform .4s cubic-bezier(.2,.9,.2,1), box-shadow .4s;
+  }
+  .step .dot {
+    width:36px;height:36px;border-radius:10px;
+    background:linear-gradient(180deg,var(--soft),#fff);
+    display:grid;place-items:center;font-weight:700;color:var(--accent);
+    border:1px solid var(--border);
+    box-shadow:0 6px 18px rgba(37,99,235,0.06);
+  }
+  .step.current { transform: translateY(-6px); box-shadow:0 18px 40px rgba(37,99,235,0.08); color:var(--text); }
+  .step-label { font-weight:600; font-size:0.92rem; }
+  .step-sub { font-size:0.82rem; color:var(--muted) }
+
+  /* upload column */
+  .drop{
+    border:1px dashed var(--border);
+    border-radius:10px;
+    padding:16px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    align-items:stretch;
+    background:linear-gradient(180deg,#fff 0%, #fbfdff 100%);
+    transition:box-shadow .15s ease, border-color .15s ease, transform .18s ease;
+  }
+  .drop.dragover{border-color:var(--accent);box-shadow:0 12px 40px rgba(37,99,235,0.06)}
+  .controls{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{
+    padding:10px 14px;border-radius:10px;border:1px solid #e6eefc;background:white;font-weight:600;cursor:pointer;font-size:0.9rem;
+  }
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:none;box-shadow:0 8px 22px rgba(37,99,235,0.12)}
+  .btn.ghost{background:transparent;border:1px dashed #e6eefc;color:var(--muted)}
+  .small{font-size:0.9rem;color:var(--muted)}
+
+  /* Updated: 2 pages per row, much larger */
+  .previews{display:grid;grid-template-columns:repeat(2, 1fr);gap:24px;margin-top:8px}
+  
+  .preview-card{border-radius:10px;border:1px solid #f1f7ff;padding:0;background:white;display:flex;flex-direction:column;gap:0;align-items:stretch;transition:transform .18s ease,box-shadow .18s ease;overflow:hidden}
+  .preview-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(16,24,40,0.08)}
+  
+  /* Larger thumbnail with 4:5 aspect ratio */
+  .thumb{border-radius:0;overflow:hidden;background:var(--soft);display:block;aspect-ratio:3/4;position:relative;cursor:crosshair;min-height:420px}
+  .thumb canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;cursor:crosshair}
+  .thumb img{width:100%;height:100%;display:block;object-fit:cover;position:relative;z-index:1}
+  .page-label{padding:6px 8px;background:#f1f7ff;font-size:0.8rem;font-weight:600;color:var(--muted);text-align:center}
+
+  /* right column - floating status sidebar - minimal compact design */
+  .status-sidebar{
+    position:fixed;
+    bottom:28px;
+    right:28px;
+    width:100px;
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    z-index:50;
+    transition: width 0.3s ease, opacity 0.3s ease;
+    opacity: 1;
+  }
+
+  .status-sidebar.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .status-sidebar.expanded {
+    width: 320px;
+    gap: 12px;
+  }
+
+  .status-card{
+    background:var(--card);
+    border-radius:var(--radius);
+    padding:14px;
+    border:1px solid var(--border);
+    box-shadow:0 10px 30px rgba(16,24,40,0.04);
+    transition: all 0.3s ease;
+  }
+
+  .status-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .spinner{width:36px;height:36px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:white;font-weight:700;font-size:0.8rem;box-shadow:0 8px 22px rgba(37,99,235,0.12)}
+  .status-line{display:flex;flex-direction:column}
+  .status-main{font-weight:600;font-size:0.95rem}
+  .status-sub{font-size:0.8rem;color:var(--muted)}
+
+  .progress-wrap{height:8px;background:var(--soft);border-radius:999px;overflow:hidden;margin:8px 0;position:relative}
+  .progress-bar{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    transition:width .6s cubic-bezier(.2,.9,.2,1);
+    position:relative;
+    overflow:hidden;
+  }
+  .progress-bar::before{
+    content:"";
+    position:absolute;inset:0;
+    background:linear-gradient(270deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.06) 100%);
+    transform:translateX(-100%);
+    animation:stripe 1.6s linear infinite;
+    mix-blend-mode:overlay;
+  }
+  @keyframes stripe{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+
+  .progress-text{display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted)}
+
+  /* selections list */
+  .selections-title{font-weight:600;font-size:0.95rem;margin-bottom:8px;margin-top:10px}
+  .selections{max-height:300px;overflow-y:auto;border:1px solid #f1f7ff;border-radius:8px;background:#fafbff}
+  .selections:empty::before{content:"No selections yet";display:block;padding:12px;color:var(--muted);font-size:0.85rem;text-align:center}
+  
+  .selection-group{border-bottom:1px solid #e6eefc;padding:0}
+  .selection-group:last-child{border-bottom:none}
+  
+  .group-header{  background: #f1f7ff;  padding: 6px 8px;  font-size: 0.8rem;  font-weight: 600;  color: var(--muted);  border-bottom: 1px solid #e6eefc;}
+  .selection-item{    display: flex;    gap: 8px;    align-items: flex-start;    padding: 8px;    border-bottom: 1px solid #f1f7ff;    font-size: 0.85rem;  }
+  .selection-item:last-child{ border-bottom: none; }
+  
+  .sel-number{min-width:24px;height:24px;border-radius:50%;background:var(--accent);color:white;display:grid;place-items:center;font-weight:700;font-size:0.7rem;flex-shrink:0;margin-top:1px}
+  .sel-content{flex:1;min-width:0}
+  .sel-type{font-weight:600;color:var(--text)}
+  .sel-label{font-size:0.8rem;color:var(--muted)}
+  .sel-remove{padding:2px 6px;border-radius:4px;background:transparent;border:1px solid #f1f7ff;color:var(--muted);cursor:pointer;font-size:0.75rem;flex-shrink:0;margin-top:1px}
+  .sel-remove:hover{background:#fee2e2;border-color:#fca5a5;color:#dc2626}
+
+  .controls-row{display:flex;gap:8px;margin-top:10px}
+  .btn-process{flex:1}
+
+  .working{display:inline-flex;align-items:center;gap:6px}
+  .dot-pulse{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:dotPulse 1.2s infinite ease-in-out}
+  .dot-pulse::after{content:"";position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 0 rgba(37,99,235,0.12);animation:pulseRing 1.4s infinite}
+  @keyframes dotPulse{0%{transform:scale(.9)}50%{transform:scale(1.15)}100%{transform:scale(.9)}}
+  @keyframes pulseRing{0%{box-shadow:0 0 0 0 rgba(37,99,235,0.12)}70%{box-shadow:0 0 0 10px rgba(37,99,235,0)}100%{box-shadow:0 0 0 0 rgba(37,99,235,0)}}
+
+  /* inline popup for type/label */
+  .sel-popup{
+    position:fixed;
+    background:white;
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:12px;
+    box-shadow:0 12px 40px rgba(0,0,0,0.15);
+    z-index:70;
+    min-width:220px;
+  }
+  .sel-popup-title{font-weight:600;font-size:0.9rem;margin-bottom:8px}
+  .sel-popup input, .sel-popup select{
+    width:100%;
+    padding:6px 8px;
+    margin-bottom:8px;
+    border:1px solid #e6eefc;
+    border-radius:6px;
+    font-size:0.85rem;
+    font-family:inherit;
+  }
+  .sel-popup-actions{display:flex;gap:8px}
+  .sel-popup-actions button{flex:1;padding:6px;border-radius:6px;border:1px solid #e6eefc;background:white;font-weight:600;font-size:0.85rem;cursor:pointer}
+  .sel-popup-actions .btn-save{background:var(--accent);color:white;border:none}
+
+  .muted-small{color:var(--muted);font-size:0.85rem}
+  
+  footer{margin-top:18px;font-size:0.85rem;color:var(--muted);text-align:center;margin-right:350px}
+
+  input[type="file"]{display:none}
+
+  /* Page color palette for boxes */
+  :root{
+    --color-page-1: #ec4899;
+    --color-page-2: #f97316;
+    --color-page-3: #eab308;
+    --color-page-4: #22c55e;
+    --color-page-5: #06b6d4;
+    --color-page-6: #3b82f6;
+    --color-page-7: #8b5cf6;
+    --color-page-8: #d946ef;
+  }
+
+  .page-color-1 { --page-color: var(--color-page-1); }
+  .page-color-2 { --page-color: var(--color-page-2); }
+  .page-color-3 { --page-color: var(--color-page-3); }
+  .page-color-4 { --page-color: var(--color-page-4); }
+  .page-color-5 { --page-color: var(--color-page-5); }
+  .page-color-6 { --page-color: var(--color-page-6); }
+  .page-color-7 { --page-color: var(--color-page-7); }
+  .page-color-8 { --page-color: var(--color-page-8); }
+
+  /* Processing overlay (fullscreen) */
+  .processing-overlay {
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:120;
+    background:linear-gradient(180deg, rgba(15,23,42,0.6), rgba(15,23,42,0.4));
+    backdrop-filter: blur(4px);
+    padding:24px;
+  }
+  .processing-card {
+    width:760px;
+    max-width:94%;
+    background:linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02));
+    border-radius:18px;
+    padding:28px;
+    color:white;
+    box-shadow:0 20px 60px rgba(2,6,23,0.6);
+    display:flex;
+    gap:20px;
+    align-items:center;
+  }
+  .processing-visual {
+    width:220px;height:220px;border-radius:20px;display:grid;place-items:center;
+    background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    border:1px solid rgba(255,255,255,0.03);
+    position:relative; overflow:hidden;
+  }
+  .orbit {
+    position:absolute; inset:0; display:grid;place-items:center;
+  }
+  .orbit .ring {
+    width:60%; height:60%; border-radius:50%; border: 3px dashed rgba(255,255,255,0.08);
+    animation:spin 8s linear infinite;
+    transform-origin:center;
+  }
+  .orbit .core {
+    width:36px;height:36px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 8px 30px rgba(37,99,235,0.2);
+    display:grid;place-items:center;font-weight:700;color:white;
+  }
+  @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+
+  .processing-info { flex:1; min-width:0;}
+  .processing-title { font-size:1.15rem;font-weight:700;margin-bottom:6px }
+  .processing-sub { color:rgba(255,255,255,0.85); margin-bottom:14px }
+  .processing-progress { height:12px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden;margin-bottom:8px; }
+  .processing-progress .bar { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .5s ease; box-shadow:0 8px 24px rgba(37,99,235,0.14); }
+  .processing-pct { font-weight:700; font-size:0.95rem; color:rgba(255,255,255,0.95) }
+
+  /* reveal/hide controls after intro animation */
+  .controls-hidden { opacity:0; transform:translateY(6px); pointer-events:none; transition:opacity .35s, transform .35s; }
+  .controls-visible { opacity:1; transform:none; pointer-events:auto; transition:opacity .35s, transform .35s; }
+
+  /* Responsive */
+  @media (max-width:1200px){
+    .previews{grid-template-columns:1fr}
+    .status-sidebar{width:280px}
+  }
+
+  @media (max-width:900px){
+    .status-sidebar{width:320px;bottom:20px;right:20px}
+  }
+
+  /* ---------- New: skeleton preview loader & transitions ---------- */
+  .skeleton-grid {
+    display:grid;
+    grid-template-columns:repeat(2,1fr);
+    gap:24px;
+    margin-top:12px;
+  }
+  .skeleton-card {
+    height:420px;
+    border-radius:10px;
+    overflow:hidden;
+    background:linear-gradient(90deg,#f3f8ff 0%, #ffffff 50%, #f3f8ff 100%);
+    background-size: 800px 100%;
+    position:relative;
+    box-shadow:0 8px 30px rgba(16,24,40,0.04);
+    animation:shimmer 1.4s linear infinite;
+    border:1px solid #eef6ff;
+  }
+  @keyframes shimmer {
+    0% { background-position: -400px 0; }
+    100% { background-position: 400px 0; }
+  }
+  .skeleton-title {
+    height:20px;
+    width:50%;
+    margin:12px;
+    border-radius:6px;
+    background:linear-gradient(90deg,#eef7ff,#f8fbff);
+    box-shadow:inset 0 -6px 18px rgba(255,255,255,0.2);
+  }
+
+  .minimal-hidden { opacity:0; pointer-events:none; transform:scale(.995); transition:opacity .3s, transform .3s; }
+  .minimal-visible { opacity:1; pointer-events:auto; transform:none; transition:opacity .3s, transform .3s; }
+
+  #viewSlidesBtn {
+    position:fixed;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    z-index:130;
+    padding:16px 32px;
+    border-radius:14px;
+    font-weight:700;
+    font-size: 1rem;
+    background:linear-gradient(90deg,var(--accent),var(--accent-2));
+    color:white;
+    border:none;
+    box-shadow:0 20px 60px rgba(37,99,235,0.18);
+    cursor: pointer;
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+    pointer-events: none;
+    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.2, 0.9, 0.2, 1);
+  }
+
+  #viewSlidesBtn.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: auto;
+  }
+
+  /* small transitions for preview area and sidebar */
+  #previews, .status-sidebar, .status-card, .card { transition:opacity .36s ease, transform .36s ease; }
+
+  @media (max-width:1200px) {
+    .skeleton-grid { grid-template-columns:1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap minimal-visible" id="mainWrap">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true">DB</div>
+        <div>
+          <h1>Deck Builder</h1>
+          <div class="muted">Upload PDF → mark figures → generate slides</div>
+        </div>
+      </div>
+      <div class="muted">Clean • Fast • Focused</div>
+    </header>
+
+    <main class="grid">
+      <!-- Main: Upload & Thumbnails Grid -->
+      <section class="card" aria-labelledby="uploadTitle">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div id="uploadTitle" style="font-weight:600">Upload PDF</div>
+          <div class="small muted-small">Supported: PDF</div>
+        </div>
+
+        <!-- Intro animated steps -->
+        <div class="intro" style="margin-bottom:12px">
+          <div class="steps" id="steps">
+            <div class="step current" data-step="1">
+              <div class="dot">1</div>
+              <div>
+                <div class="step-label">Choose PDF</div>
+                <div class="step-sub">Drag or select a file</div>
+              </div>
+            </div>
+            <div class="step" data-step="2">
+              <div class="dot">2</div>
+              <div>
+                <div class="step-label">Mark Figures</div>
+                <div class="step-sub">Draw boxes on pages</div>
+              </div>
+            </div>
+            <div class="step" data-step="3">
+              <div class="dot">3</div>
+              <div>
+                <div class="step-label">Generate Slides</div>
+                <div class="step-sub">Process & download</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="margin-left:auto;min-width:220px;">
+            <div class="muted-small">Steps will be highlighted briefly</div>
+          </div>
+        </div>
+
+        <div id="dropZone" class="drop" aria-describedby="uploadHint">
+          <div id="uploadHint" class="small">Drag & drop or choose a PDF to begin.</div>
+
+          <div class="controls" role="group" aria-label="upload controls">
+            <button id="uploadBtn" class="btn primary controls-visible">Upload</button>
+            <button id="clearBtn" class="btn controls-hidden" title="Reset" style="display:none">Clear</button>
+          </div>
+
+          <div id="statusBox" class="small" style="margin-top:6px">No file selected</div>
+
+          <!-- Thumbnail grid - 2 columns, larger pages -->
+          <div id="skeletonPreviews" class="skeleton-grid" style="display:none" aria-hidden="true">
+            <div class="skeleton-card"><div class="skeleton-title"></div></div>
+            <div class="skeleton-card"><div class="skeleton-title"></div></div>
+            <div class="skeleton-card"><div class="skeleton-title"></div></div>
+            <div class="skeleton-card"><div class="skeleton-title"></div></div>
+          </div>
+
+          <div class="previews" id="previews" aria-live="polite" style="display:none"></div>
+        </div>
+      </section>
+
+      <!-- Right Sidebar: Status & Selections (Floating) -->
+      <aside class="status-sidebar" id="statusSidebar">
+        <!-- Status Card -->
+        <div class="status-card" aria-labelledby="statusTitle">
+          <div id="statusTitle" style="font-weight:600;font-size:0.95rem;margin-bottom:10px">Status</div>
+
+          <div class="status-header" role="status" aria-live="polite">
+            <div class="spinner" id="statusIcon" aria-hidden="true">DB</div>
+            <div class="status-line">
+              <div id="statusMain" class="status-main">Idle</div>
+              <div id="statusSub" class="status-sub">Awaiting upload</div>
+            </div>
+          </div>
+
+          <!-- Linear progress (shared for upload/process) -->
+          <div class="progress-wrap" aria-hidden="false">
+            <div id="progressBar" class="progress-bar" style="width:0%"></div>
+          </div>
+          <div class="progress-text">
+            <div class="small" id="progressPct">0%</div>
+            <div id="manifestArea" style="display:none"><a id="manifestLink" class="muted" target="_blank" rel="noopener" style="font-size:0.75rem">Open slides →</a></div>
+          </div>
+        </div>
+
+        <!-- Selections Card -->
+        <div class="status-card">
+          <div class="selections-title">Selections</div>
+          <div class="selections" id="selections"></div>
+
+          <div class="controls-row">
+            <button id="processBtn" class="btn primary btn-process controls-hidden" disabled>Done</button>
+          </div>
+
+          <div id="workingIndicator" style="display:none;margin-top:8px" class="working" aria-hidden="true">
+            <div class="dot-pulse" aria-hidden="true"></div>
+            <div class="muted-small">Processing…</div>
+          </div>
+
+          <div class="muted-small" style="margin-top:10px">
+            Click on pages to draw boxes. Fill in type & label.
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <footer>
+      <div class="muted-small">Local demo — endpoints: POST /upload, POST /process/{id}, GET /status/{id}</div>
+    </footer>
+  </div>
+
+  <!-- Inline Selection Popup -->
+  <div id="selPopup" class="sel-popup" style="display:none" role="dialog" aria-modal="true">
+    <div class="sel-popup-title">Selection Details</div>
+    <select id="selType" style="width:100%;padding:6px 8px;margin-bottom:8px;border:1px solid #e6eefc;border-radius:6px;font-size:0.85rem;font-family:inherit">
+      <option value="figure">Figure</option>
+      <option value="table">Table</option>
+    </select>
+    <div class="sel-popup-actions">
+      <button id="popupSaveBtn" class="btn-save">Save</button>
+      <button id="popupCancelBtn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Processing overlay -->
+  <div id="processingOverlay" class="processing-overlay" aria-hidden="true">
+    <div class="processing-card" role="dialog" aria-modal="true" aria-label="Processing">
+      <div class="processing-visual" aria-hidden="true">
+        <div class="orbit" aria-hidden="true">
+          <div class="ring"></div>
+          <div class="core">DB</div>
+        </div>
+      </div>
+
+      <div class="processing-info">
+        <div class="processing-title" id="procTitle">Generating slides</div>
+        <div class="processing-sub" id="procSub">Your selections are being processed. This may take a moment.</div>
+        <div class="processing-progress" aria-hidden="false">
+          <div id="procBar" class="bar" style="width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div class="processing-pct" id="procPct">0%</div>
+          <div><button id="procClose" class="btn" style="background:transparent;border:1px solid rgba(255,255,255,0.08);color:white">Cancel</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Centered View button after processing -->
+  <button id="viewSlidesBtn" aria-label="View slides">View slides</button>
+
+<script>
+/* Element refs */
+const fileInput = document.getElementById('fileInput');
+const uploadBtn = document.getElementById('uploadBtn');
+const clearBtn = document.getElementById('clearBtn');
+const processBtn = document.getElementById('processBtn');
+const dropZone = document.getElementById('dropZone');
+const previewsEl = document.getElementById('previews');
+const statusBox = document.getElementById('statusBox');
+const progressBar = document.getElementById('progressBar');
+const progressPct = document.getElementById('progressPct');
+const manifestArea = document.getElementById('manifestArea');
+const manifestLink = document.getElementById('manifestLink');
+const selectionsEl = document.getElementById('selections');
+const statusMain = document.getElementById('statusMain');
+const statusSub = document.getElementById('statusSub');
+const statusIcon = document.getElementById('statusIcon');
+const workingIndicator = document.getElementById('workingIndicator');
+const statusSidebar = document.getElementById('statusSidebar');
+
+const selPopup = document.getElementById('selPopup');
+const selType = document.getElementById('selType');
+const popupSaveBtn = document.getElementById('popupSaveBtn');
+const popupCancelBtn = document.getElementById('popupCancelBtn');
+
+const processingOverlay = document.getElementById('processingOverlay');
+const procBar = document.getElementById('procBar');
+const procPct = document.getElementById('procPct');
+const procTitle = document.getElementById('procTitle');
+const procSub = document.getElementById('procSub');
+const procClose = document.getElementById('procClose');
+
+const viewSlidesBtn = document.getElementById('viewSlidesBtn');
+const mainWrap = document.getElementById('mainWrap');
+
+const skeletonPreviews = document.getElementById('skeletonPreviews');
+
+/* State */
+let chosenFile = null;
+let currentUpload = null;
+let previews = []; // {page, path, filename, imgEl, canvasEl}
+let selections = []; // {page, x, y, w, h, type}
+let pollInterval = null;
+let isProcessing = false;
+
+/* Drawing state */
+let activeDrawing = null;
+let pendingRect = null;
+
+/* Page colors */
+const pageColors = ['#ec4899','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#d946ef'];
+function getPageColor(pageNum){ return pageColors[(pageNum-1) % pageColors.length]; }
+
+/* Intro step animation: highlight steps then reveal controls */
+(function runIntro() {
+  const steps = Array.from(document.querySelectorAll('.step'));
+  let idx = 0;
+  const interval = setInterval(() => {
+    steps.forEach((s,i) => s.classList.toggle('current', i === idx));
+    idx++;
+    if (idx >= steps.length) {
+      clearInterval(interval);
+      setTimeout(revealControls, 700);
+    }
+  }, 700);
+})();
+
+function revealControls(){
+  // Only upload button is visible initially
+  uploadBtn.classList.remove('controls-hidden');
+  uploadBtn.classList.add('controls-visible');
+  uploadBtn.disabled = false;
+}
+
+/* ---------- Minimal safe helper functions (no validation) ---------- */
+function safeUrl(base, id) {
+  return `${base}/${encodeURIComponent(String(id))}`;
+}
+async function fetchJSONSafe(input, init = {}) {
+  const res = await fetch(input, init);
+  const txt = await res.text();
+  let data = null;
+  try { data = txt ? JSON.parse(txt) : null; } catch (e) { /* allow non-json */ }
+  if (!res.ok) {
+    const msg = (data && data.message) ? data.message : `Server returned ${res.status}`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+/* --- File selection & drag/drop (no validation) --- */
+uploadBtn.addEventListener('click', () => {
+  if (!chosenFile) {
+    fileInput.click();
+    return;
+  }
+  doUpload();
+});
+
+const fileInputElement = document.createElement('input');
+fileInputElement.type = 'file';
+fileInputElement.accept = 'application/pdf';
+fileInputElement.style.display = 'none';
+fileInputElement.addEventListener('change', (e) => {
+  const f = e.target.files && e.target.files[0];
+  if (f) {
+    chosenFile = f;
+    uploadBtn.textContent = 'Start upload';
+    statusBox.textContent = `Selected: ${f.name}`;
+    setStatus('Ready to upload', f.name);
+    uploadBtn.disabled = false;
+  }
+});
+document.body.appendChild(fileInputElement);
+
+dropZone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e)=> {
+  e.preventDefault(); dropZone.classList.remove('dragover');
+  const f = (e.dataTransfer.files && e.dataTransfer.files[0]);
+  if (f) {
+    chosenFile = f;
+    fileInputElement.files = e.dataTransfer.files;
+    uploadBtn.textContent = 'Start upload';
+    statusBox.textContent = `Selected: ${f.name}`;
+    setStatus('Ready to upload', f.name);
+    uploadBtn.disabled = false;
+  } else {
+    setStatus('Please drop a file', '');
+  }
+});
+
+uploadBtn.addEventListener('click', () => {
+  if (!chosenFile) {
+    fileInputElement.click();
+    return;
+  }
+  doUpload();
+});
+
+/* Reset */
+clearBtn.addEventListener('click', resetAll);
+function resetAll(){
+  chosenFile = null;
+  fileInputElement.value = '';
+  uploadBtn.disabled = false;
+  uploadBtn.textContent = 'Upload';
+  processBtn.disabled = true;
+  currentUpload = null;
+  previews = [];
+  selections = [];
+  previewsEl.innerHTML = '';
+  selectionsEl.innerHTML = '';
+  manifestArea.style.display = 'none';
+  previewsEl.style.display = 'none';
+  skeletonPreviews.style.display = 'none';
+  updateProgress(0);
+  setStatus('Cleared', 'Awaiting file');
+  statusBox.textContent = 'No file selected';
+  stopPolling();
+  hideProcessingOverlay();
+  viewSlidesBtn.classList.remove('show');
+  statusSidebar.classList.remove('hidden');
+  mainWrap.classList.remove('minimal-hidden');
+  mainWrap.classList.add('minimal-visible');
+}
+
+function doUpload() {
+  if (!chosenFile) return;
+  uploadBtn.disabled = true;
+  setStatus('Uploading…', chosenFile.name);
+
+  const xhr = new XMLHttpRequest();
+  const fd = new FormData();
+  fd.append('file', chosenFile, chosenFile.name);
+
+  xhr.upload.addEventListener('progress', (e) => {
+    if (e.lengthComputable) {
+      const pct = Math.round((e.loaded / e.total) * 100);
+      updateProgress(pct);
+      setStatus('Uploading…', `${pct}%`);
+    }
+  });
+
+  xhr.open('POST','/upload', true);
+  xhr.responseType = 'json';
+  xhr.onload = function() {
+    uploadBtn.disabled = false;
+    if (xhr.status >= 200 && xhr.status < 300 && xhr.response) {
+      const data = xhr.response;
+      currentUpload = { upload_id: data.upload_id, status_url: data.status_url };
+      if (data.pdf_filename) currentUpload.pdf_filename = data.pdf_filename;
+      setStatus('Upload complete', 'Rendering previews');
+      updateProgress(0);
+
+      // Hide upload button and controls
+      document.querySelector('.controls').style.display = 'none';
+
+      // show skeleton while previews appear
+      skeletonPreviews.style.display = 'grid';
+      previewsEl.style.display = 'none';
+
+      // if server returned previews, hand off; otherwise wait for status poll to provide them
+      if (data.previews && data.previews.length) {
+        setTimeout(() => {
+          skeletonPreviews.style.display = 'none';
+          renderThumbnails(data.previews || []);
+          setStatus('Ready', 'Select important figures');
+          processBtn.classList.remove('controls-hidden');
+          processBtn.classList.add('controls-visible');
+          processBtn.textContent = 'Done';
+          processBtn.disabled = true;
+          statusSidebar.classList.add('expanded');
+        }, 600);
+      } else {
+        // wait a short time and poll /status once for previews
+        setTimeout(fetchStatusOnce, 700);
+      }
+
+      statusBox.textContent = `Selected: ${chosenFile.name}`;
+    } else {
+      setStatus('Upload failed', `Server returned ${xhr.status}`);
+      uploadBtn.disabled = false;
+    }
+  };
+  xhr.onerror = function(){ setStatus('Upload failed', 'Network error'); uploadBtn.disabled = false; };
+  xhr.send(fd);
+}
+
+/* Fetch one-off status to see if previews are ready (if server produces them async) */
+async function fetchStatusOnce() {
+  if (!currentUpload || !currentUpload.upload_id) return;
+  try {
+    const url = safeUrl('/status', currentUpload.upload_id);
+    const res = await fetch(url);
+    if (!res.ok) return;
+    const obj = await res.json();
+    if (obj.pdf_filename) currentUpload.pdf_filename = obj.pdf_filename;
+    if (obj.progress !== undefined) updateProgress(obj.progress);
+    if (obj.previews && obj.previews.length) {
+      skeletonPreviews.style.display = 'none';
+      renderThumbnails(obj.previews);
+      setStatus('Ready', 'Select important figures');
+      processBtn.classList.remove('controls-hidden');
+      processBtn.classList.add('controls-visible');
+      processBtn.textContent = 'Done';
+      processBtn.disabled = true;
+      statusSidebar.classList.add('expanded');
+    }
+    if (obj.manifest_url) showManifest(obj.manifest_url);
+  } catch (e) { console.warn('status fetch failed', e); }
+}
+
+/* --- Thumbnails & drawing setup --- */
+function renderThumbnails(list){
+  previews = [];
+  previewsEl.innerHTML = '';
+  list.forEach(item => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = item.path;
+    img.alt = `Page ${item.page}`;
+    img.dataset.page = item.page;
+    previews.push({ page: item.page, path: item.path, filename: item.filename, imgEl: img });
+
+    const card = document.createElement('div');
+    const pageClass = `page-color-${((item.page - 1) % 8) + 1}`;
+    card.className = `preview-card ${pageClass}`;
+
+    const thumbContainer = document.createElement('div');
+    thumbContainer.className = 'thumb';
+
+    const canvas = document.createElement('canvas');
+    thumbContainer.appendChild(canvas);
+
+    const imgEl = document.createElement('img');
+    imgEl.src = item.path;
+    imgEl.alt = `Page ${item.page}`;
+    imgEl.dataset.page = item.page;
+    thumbContainer.appendChild(imgEl);
+
+    const label = document.createElement('div');
+    label.className = 'page-label';
+    label.textContent = `Page ${item.page}`;
+
+    card.appendChild(thumbContainer);
+    card.appendChild(label);
+    previewsEl.appendChild(card);
+
+    imgEl.addEventListener('load', () => { setupThumbnailDrawing(canvas, imgEl, item.page); });
+    if (imgEl.complete) setupThumbnailDrawing(canvas, imgEl, item.page);
+
+    const previewEntry = previews.find(p => p.page === item.page);
+    if (previewEntry) previewEntry.canvasEl = canvas;
+  });
+
+  if (previews.length > 0) {
+    previewsEl.style.display = 'grid';
+  }
+}
+
+function setupThumbnailDrawing(canvas, imgEl, page){
+  if (!imgEl.complete || !imgEl.naturalWidth) return;
+  canvas.width = imgEl.naturalWidth;
+  canvas.height = imgEl.naturalHeight;
+  canvas.style.display = 'block';
+  canvas.style.position = 'absolute';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.cursor = 'crosshair';
+  canvas.style.zIndex = '10';
+  const ctx = canvas.getContext('2d');
+
+  canvas.addEventListener('mousedown', (e) => startDrawing(e, canvas, page, imgEl));
+  canvas.addEventListener('mouseup', () => endDrawing(canvas, page, imgEl));
+  canvas.addEventListener('mouseleave', () => endDrawing(canvas, page, imgEl));
+  window.addEventListener('mousemove', (e) => {
+    if (activeDrawing && activeDrawing.page === page) continueDrawing(e, canvas, page, imgEl);
+  });
+
+  canvas.addEventListener('touchstart', (e) => startDrawing(e, canvas, page, imgEl), {passive:false});
+  canvas.addEventListener('touchend', () => endDrawing(canvas, page, imgEl));
+  window.addEventListener('touchmove', (e) => {
+    if (activeDrawing && activeDrawing.page === page) continueDrawing(e, canvas, page, imgEl);
+  }, {passive:false});
+
+  redrawCanvas(canvas, imgEl, page);
+}
+
+function clientToCanvasCoords(evt, canvas, imgEl) {
+  const rect = imgEl.getBoundingClientRect();
+  const displayW = rect.width;
+  const displayH = rect.height;
+  const scaleX = canvas.width / displayW;
+  const scaleY = canvas.height / displayH;
+  const touch = evt.touches ? evt.touches[0] : evt;
+  const cx = (touch.clientX - rect.left) * scaleX;
+  const cy = (touch.clientY - rect.top) * scaleY;
+  return { x: Math.max(0, Math.min(canvas.width, Math.round(cx))), y: Math.max(0, Math.min(canvas.height, Math.round(cy))) };
+}
+
+function startDrawing(evt, canvas, page, imgEl){
+  evt.preventDefault();
+  const p = clientToCanvasCoords(evt, canvas, imgEl);
+  activeDrawing = { page, canvas, imgEl, startX: p.x, startY: p.y, currentRect: { x: p.x, y: p.y, w: 0, h: 0 } };
+  redrawCanvas(canvas, imgEl, page);
+}
+
+function continueDrawing(evt, canvas, page, imgEl){
+  if (!activeDrawing || activeDrawing.page !== page) return;
+  evt.preventDefault();
+  const p = clientToCanvasCoords(evt, canvas, imgEl);
+  const rect = activeDrawing.currentRect;
+  rect.w = Math.abs(p.x - activeDrawing.startX);
+  rect.h = Math.abs(p.y - activeDrawing.startY);
+  rect.x = Math.min(p.x, activeDrawing.startX);
+  rect.y = Math.min(p.y, activeDrawing.startY);
+  redrawCanvas(canvas, imgEl, page);
+}
+
+function endDrawing(canvas, page, imgEl){
+  if (!activeDrawing || activeDrawing.page !== page) return;
+  const rect = activeDrawing.currentRect;
+  if (rect.w > 4 && rect.h > 4) {
+    pendingRect = { page, x: rect.x, y: rect.y, w: rect.w, h: rect.h };
+    showSelectionPopup(imgEl);
+  }
+  activeDrawing = null;
+  redrawCanvas(canvas, imgEl, page);
+}
+
+function redrawCanvas(canvas, imgEl, page){
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  const pageColor = getPageColor(page);
+  const boxes = selections.filter(s => s.page === page);
+  boxes.forEach((box, idx) => {
+    const num = (selections.indexOf(box) + 1);
+    drawBox(ctx, box.x, box.y, box.w, box.h, pageColor, num);
+  });
+
+  if (activeDrawing && activeDrawing.page === page && activeDrawing.currentRect.w > 0) {
+    drawBox(ctx, activeDrawing.currentRect.x, activeDrawing.currentRect.y, activeDrawing.currentRect.w, activeDrawing.currentRect.h, pageColor, '?', true);
+  }
+  canvas.style.display = 'block';
+  canvas.style.cursor = 'crosshair';
+}
+
+function drawBox(ctx, x, y, w, h, color, num = '', isDraft = false){
+  const lineWidth = isDraft ? 2 : 3;
+  const alpha = isDraft ? 0.5 : 0.95;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = lineWidth;
+  ctx.globalAlpha = alpha;
+  ctx.strokeRect(x, y, w, h);
+  ctx.globalAlpha = 1;
+
+  const fontSize = Math.max(14, Math.min(24, w / 6));
+  ctx.font = `bold ${fontSize}px Inter, sans-serif`;
+  ctx.fillStyle = color;
+  ctx.fillText(String(num), x + 6, y + fontSize + 2);
+}
+
+/* Selection popup */
+function showSelectionPopup(imgEl) {
+  selType.value = 'figure';
+  const rect = imgEl.getBoundingClientRect();
+  selPopup.style.left = (rect.left + rect.width / 2 - 110) + 'px';
+  selPopup.style.top = (rect.top + rect.height / 2 - 70) + 'px';
+  selPopup.style.display = 'block';
+  selType.focus();
+}
+popupSaveBtn.addEventListener('click', () => {
+  if (!pendingRect) return;
+  const type = selType.value || 'figure';
+  selections.push({
+    page: pendingRect.page,
+    x: pendingRect.x,
+    y: pendingRect.y,
+    w: pendingRect.w,
+    h: pendingRect.h,
+    type: type
+  });
+  pendingRect = null;
+  selPopup.style.display = 'none';
+  renderSelections();
+  previews.forEach(p => { if (p.canvasEl && p.imgEl) redrawCanvas(p.canvasEl, p.imgEl, p.page); });
+});
+popupCancelBtn.addEventListener('click', () => { pendingRect = null; selPopup.style.display = 'none'; });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selPopup.style.display !== 'none') popupCancelBtn.click(); });
+
+/* Selections panel */
+function renderSelections(){
+  selectionsEl.innerHTML = '';
+  if (selections.length === 0) {
+    processBtn.disabled = true;
+    return;
+  }
+  const byPage = {};
+  selections.forEach((s, idx) => {
+    if (!byPage[s.page]) byPage[s.page] = [];
+    byPage[s.page].push({ ...s, globalIdx: idx });
+  });
+  const sortedPages = Object.keys(byPage).map(Number).sort((a,b)=>a-b);
+  let boxNum = 1;
+  sortedPages.forEach(page => {
+    const group = document.createElement('div'); group.className = 'selection-group';
+    const header = document.createElement('div'); header.className = 'group-header'; header.textContent = `Page ${page}`;
+    group.appendChild(header);
+    byPage[page].forEach(item => {
+      const itemEl = document.createElement('div'); itemEl.className='selection-item';
+      const num = document.createElement('div'); num.className='sel-number'; num.style.background=getPageColor(page); num.textContent = boxNum;
+      const content = document.createElement('div'); content.className='sel-content';
+      const type = document.createElement('div'); type.className='sel-type'; type.textContent = item.type.charAt(0).toUpperCase() + item.type.slice(1);
+      content.appendChild(type);
+      const rm = document.createElement('button'); rm.className='sel-remove'; rm.textContent='Remove';
+      rm.addEventListener('click', () => {
+        selections.splice(item.globalIdx, 1);
+        renderSelections();
+        previews.forEach(p => { if (p.canvasEl && p.imgEl) redrawCanvas(p.canvasEl, p.imgEl, p.page); });
+      });
+      itemEl.appendChild(num); itemEl.appendChild(content); itemEl.appendChild(rm);
+      group.appendChild(itemEl);
+      boxNum++;
+    });
+    selectionsEl.appendChild(group);
+  });
+  processBtn.disabled = !(selections.length > 0);
+}
+
+/* Compact sidebar toggle */
+statusSidebar.addEventListener('click', (e) => {
+  if (!e.target.closest('button')) statusSidebar.classList.toggle('expanded');
+});
+
+/* Processing: send selections, show overlay, poll progress */
+processBtn.addEventListener('click', async () => {
+  // Require only that the upload exists and we have an upload_id.
+  if (!currentUpload || !currentUpload.upload_id) {
+    alert('Ensure a file is uploaded first.');
+    return;
+  }
+
+  // UI: hide main UI and sidebar
+  mainWrap.classList.remove('minimal-visible');
+  mainWrap.classList.add('minimal-hidden');
+  statusSidebar.classList.add('hidden');
+
+  showProcessingOverlay();
+
+  // Build payload — fall back to chosenFile.name if pdf_filename is missing
+  const payload = {
+    pdf_filename: currentUpload.pdf_filename || (chosenFile && chosenFile.name) || null,
+    selections: selections,
+    use_extractor: false
+  };
+
+  processBtn.disabled = true;
+  setStatus('Queued', 'Starting processing');
+
+  try {
+    const url = safeUrl('/process', currentUpload.upload_id);
+    const res = await fetchJSONSafe(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    setStatus('Processing', 'Server-side work started');
+    workingIndicator.style.display = 'inline-flex';
+    isProcessing = true;
+    startPolling(currentUpload.upload_id);
+  } catch (e) {
+    console.error(e);
+    setStatus('Failed to start', e.message || '');
+    processBtn.disabled = false;
+    hideProcessingOverlay();
+    mainWrap.classList.remove('minimal-hidden');
+    mainWrap.classList.add('minimal-visible');
+    statusSidebar.classList.remove('hidden');
+  }
+});
+
+/* Processing overlay controls */
+function showProcessingOverlay(){
+  processingOverlay.style.display = 'flex';
+  processingOverlay.setAttribute('aria-hidden','false');
+  procBar.style.width = '0%';
+  procPct.textContent = '0%';
+  setStatus('Processing', 'Preparing…');
+}
+function hideProcessingOverlay(){
+  processingOverlay.style.display = 'none';
+  processingOverlay.setAttribute('aria-hidden','true');
+}
+
+/* Cancel processing */
+procClose.addEventListener('click', () => {
+  stopPolling();
+  workingIndicator.style.display = 'none';
+  isProcessing = false;
+  processBtn.disabled = false;
+  setStatus('Cancelled', 'Processing cancelled by user');
+  hideProcessingOverlay();
+  mainWrap.classList.remove('minimal-hidden');
+  mainWrap.classList.add('minimal-visible');
+  statusSidebar.classList.remove('hidden');
+  viewSlidesBtn.classList.remove('show');
+});
+
+/* Polling for status */
+function startPolling(upload_id){
+  stopPolling();
+  const tick = async () => {
+    try {
+      const url = safeUrl('/status', upload_id);
+      const res = await fetch(url);
+      if (!res.ok) {
+        console.warn('status fetch failed', res.status);
+        return;
+      }
+      const data = await res.json();
+      if (data.progress !== undefined) {
+        updateProgress(data.progress);
+        procBar.style.width = Math.max(0, Math.min(100, Number(data.progress))) + '%';
+        procPct.textContent = Math.max(0, Math.min(100, Number(data.progress))) + '%';
+      }
+      if (data.message) setStatus((data.state === 'error' ? 'Error' : statusMain.textContent), data.message);
+      if (data.pdf_filename && !currentUpload.pdf_filename) currentUpload.pdf_filename = data.pdf_filename;
+      if (data.manifest_url) showManifest(data.manifest_url);
+
+      if (data.state === 'done' || data.state === 'error') {
+        stopPolling();
+        workingIndicator.style.display = 'none';
+        processBtn.disabled = false;
+        isProcessing = false;
+        if (data.state === 'done') {
+          setStatus('Done', 'Processing complete');
+          procTitle.textContent = 'Done';
+          procSub.textContent = 'Slides ready to view';
+          setTimeout(() => {
+            hideProcessingOverlay();
+            // Show centered view slides button
+            viewSlidesBtn.classList.add('show');
+            viewSlidesBtn.onclick = () => { window.open('/index.html','_blank'); };
+          }, 800);
+        } else {
+          setStatus('Error', data.message || 'Processing failed');
+          procTitle.textContent = 'Error';
+          procSub.textContent = data.message || 'Processing failed';
+          setTimeout(() => {
+            hideProcessingOverlay();
+            mainWrap.classList.remove('minimal-hidden');
+            mainWrap.classList.add('minimal-visible');
+            statusSidebar.classList.remove('hidden');
+          }, 1400);
+        }
+      }
+    } catch (e) {
+      console.warn('poll error', e);
+    }
+  };
+  tick();
+  pollInterval = setInterval(tick, 2500);
+}
+
+function stopPolling(){
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = null;
+}
+
+/* Helpers: progress, status, manifest */
+function updateProgress(pct){
+  const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
+  progressBar.style.width = clamped + '%';
+  progressPct.textContent = clamped + '%';
+}
+function setStatus(main, sub){
+  statusMain.textContent = main || '';
+  statusSub.textContent = sub || '';
+}
+function showManifest(url){
+  manifestArea.style.display = 'block';
+  manifestLink.href = '/index.html';
+  manifestLink.textContent = 'Open slides →';
+}
+
+/* Probe backend on load */
+(async function probe(){
+  try {
+    const r = await fetch('/');
+    if (r.ok) { setStatus('Ready','Select a PDF to begin'); }
+    else { setStatus('Backend unreachable','Server returned '+r.status); uploadBtn.disabled=true; }
+  } catch(e) { setStatus('Backend not reachable','Ensure server is running at /'); uploadBtn.disabled=true; }
+})();
+</script>
+</body>
+</html>
