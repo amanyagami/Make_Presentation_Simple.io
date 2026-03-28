@@ -168,64 +168,6 @@ sequenceDiagram
 
 ---
 
-#### 2️⃣ Preprocessing Flow
-
-```mermaid
-sequenceDiagram
-    participant FE as Frontend
-    participant API as API Gateway
-    participant SP as start_preprocess
-    participant SM as Step Functions
-    participant ET as extract_text
-    participant RP as render_previews
-    participant DDB as DynamoDB
-    participant S3 as S3
-
-    FE->>API: POST /preprocess/{id}
-    API->>SP: Start preprocessing
-    SP->>SM: Trigger workflow
-    SM->>ET: Extract text
-    ET->>S3: Save raw.txt
-    ET->>DDB: Update status
-    SM->>RP: Generate previews
-    RP->>S3: Save images
-    RP->>DDB: Update previews
-```
-
-#### 3️⃣ Processing Flow
-
-```mermaid
-sequenceDiagram
-    participant FE as Frontend
-    participant API as API Gateway
-    participant SPR as start_processing
-    participant SM as Step Functions
-    participant CF as crop_figures
-    participant CM as call_model
-    participant WJ as write_final_json
-    participant CL as cleanup_data
-    participant DDB as DynamoDB
-    participant S3 as S3
-
-    FE->>API: POST /process/{id}
-    API->>SPR: Start processing
-    SPR->>SM: Trigger workflow
-    SM->>CF: Crop figures
-    CF->>S3: Save crops
-    CF->>DDB: Update state
-    SM->>CM: Generate slides (AI)
-    CM->>S3: Save final.json
-    CM->>DDB: Update state
-    SM->>WJ: Write viewer
-    WJ->>S3: Save index.html
-    WJ->>DDB: Save viewer URL
-    SM->>CL: Cleanup
-    CL->>S3: Delete temp files
-    CL->>DDB: Mark complete
-```
-
----
-
 ## 🧩 Key Components
 
 | Component          | Role                            |
@@ -312,18 +254,6 @@ Each job tracks:
 * Scalable pipelines via Step Functions
 * Multimodal AI integration
 * Real-world document understanding use case
-
----
-
-## 🏁 Summary
-
-This project demonstrates how to build an **end-to-end AI-powered document processing system** using AWS-native services and modern LLM pipelines.
-
-It is a strong example of:
-
-* Event-driven architecture
-* Serverless orchestration
-* AI integration in production workflows
 
 ---
 
