@@ -1,0 +1,243 @@
+Transform: AWS::Serverless-2016-10-31
+Description: PDF to deck pipeline with preprocess and process workflows
+
+Parameters:
+  HFToken:
+    Type: String
+    NoEcho: true
+    Description: Hugging Face token used by call_model Lambda
+
+Globals:
+  Function:
+    Runtime: python3.12
+    Timeout: 60
+    MemorySize: 512
+
+Resources:
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+
+  JobTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: upload_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: upload_id
+          KeyType: HASH
+
+  CreateUploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/create_upload/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: post
+
+  StartPreprocessFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/start_preprocess/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          TABLE: !Ref JobTable
+          STATE_MACHINE_ARN: !Ref PreprocessStateMachine
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt PreprocessStateMachine.Name
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /preprocess/{upload_id}
+            Method: post
+
+  StatusFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/status/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          TABLE: !Ref JobTable
+      Policies:
+        - DynamoDBReadPolicy:
+            TableName: !Ref JobTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /status/{upload_id}
+            Method: get
+
+  RenderPreviewsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/render_previews/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+
+  ExtractTextFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/extract_text/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+
+  StartProcessingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/start_processing/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          TABLE: !Ref JobTable
+          STATE_MACHINE_ARN: !Ref ProcessStateMachine
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt ProcessStateMachine.Name
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /process/{upload_id}
+            Method: post
+
+  CropFiguresFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/crop_figures/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+
+  CallModelFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/call_model/
+      Handler: app.lambda_handler
+      Timeout: 300
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+          HF_TOKEN: !Ref HFToken
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+
+  WriteFinalJsonFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/write_final_json/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+
+  CleanupDataFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: functions/cleanup_data/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+
+  PreprocessStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/preprocess.asl.json
+      DefinitionSubstitutions:
+        ExtractTextFunctionArn: !GetAtt ExtractTextFunction.Arn
+        RenderPreviewsFunctionArn: !GetAtt RenderPreviewsFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ExtractTextFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RenderPreviewsFunction
+
+  ProcessStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/process.asl.json
+      DefinitionSubstitutions:
+        CropFiguresFunctionArn: !GetAtt CropFiguresFunction.Arn
+        CallModelFunctionArn: !GetAtt CallModelFunction.Arn
+        WriteFinalJsonFunctionArn: !GetAtt WriteFinalJsonFunction.Arn
+        CleanupDataFunctionArn: !GetAtt CleanupDataFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CropFiguresFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CallModelFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref WriteFinalJsonFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CleanupDataFunction
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  ArtifactBucketName:
+    Value: !Ref ArtifactBucket
+  JobTableName:
+    Value: !Ref JobTable

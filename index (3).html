@@ -1,0 +1,1523 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Deck Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+/* ── Tokens ─────────────────────────────────────── */
+:root {
+  --radius: 14px;
+  --accent: #6c63ff;
+  --accent2: #38d9f5;
+  --accent-glow: rgba(108,99,255,0.25);
+
+  /* Dark theme */
+  --bg: #0b0c11;
+  --surface: #13151d;
+  --surface2: #1a1d29;
+  --surface3: #20243a;
+  --border: rgba(255,255,255,0.07);
+  --text: #eef0f8;
+  --muted: #556080;
+  --tag-bg: rgba(108,99,255,0.12);
+  --tag-border: rgba(108,99,255,0.25);
+  --tag-color: #a8a0ff;
+  --shadow: 0 32px 80px rgba(0,0,0,0.6);
+  --slide-bg: #13151d;
+  --foot-bg: #0f111a;
+  --toggle-bg: #20243a;
+  --toggle-thumb: #6c63ff;
+  --notes-bg: rgba(108,99,255,0.05);
+  --notes-border: rgba(108,99,255,0.15);
+  --edit-panel-bg: #0f111a;
+  --edit-section-bg: #1a1d29;
+  --input-bg: #20243a;
+  --input-border: rgba(255,255,255,0.1);
+}
+
+[data-theme="light"] {
+  --bg: #f0f1f7;
+  --surface: #ffffff;
+  --surface2: #f5f6fb;
+  --surface3: #e8eaf4;
+  --border: rgba(0,0,0,0.08);
+  --text: #1a1d2e;
+  --muted: #7a84a8;
+  --tag-bg: rgba(108,99,255,0.08);
+  --tag-border: rgba(108,99,255,0.2);
+  --tag-color: #6c63ff;
+  --shadow: 0 24px 64px rgba(0,0,0,0.12);
+  --slide-bg: #ffffff;
+  --foot-bg: #f8f9fd;
+  --toggle-bg: #e0e2f0;
+  --toggle-thumb: #6c63ff;
+  --notes-bg: rgba(108,99,255,0.04);
+  --notes-border: rgba(108,99,255,0.15);
+  --edit-panel-bg: #f0f1f7;
+  --edit-section-bg: #ffffff;
+  --input-bg: #f5f6fb;
+  --input-border: rgba(0,0,0,0.1);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* ── Top Bar ──────────────────────────────────── */
+.top-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 18px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  z-index: 100;
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.tb-left { display: flex; align-items: center; gap: 14px; }
+
+.tb-brand {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 0.95rem;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.tb-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: var(--muted);
+  padding: 3px 8px;
+  background: var(--surface2);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.tb-actions { display: flex; gap: 8px; align-items: center; }
+
+/* ── Theme Toggle ─────────────────────────────── */
+.theme-toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.theme-toggle-track {
+  width: 52px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--toggle-bg);
+  border: 1px solid var(--border);
+  position: relative;
+  transition: background 0.3s ease, border-color 0.3s ease;
+  overflow: hidden;
+}
+
+.theme-toggle-track::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  border-radius: 14px;
+}
+
+[data-theme="light"] .theme-toggle-track::before { opacity: 0.15; }
+
+.theme-toggle-thumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  background: var(--accent);
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+[data-theme="light"] .theme-toggle-thumb {
+  transform: translateX(24px);
+  background: var(--accent);
+}
+
+.theme-toggle-icons {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 5px;
+  font-size: 10px;
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  align-items: center;
+  height: 100%;
+}
+
+.theme-icon { opacity: 0.4; transition: opacity 0.3s; }
+[data-theme="dark"]  .icon-moon { opacity: 0; }
+[data-theme="dark"]  .icon-sun  { opacity: 0.8; }
+[data-theme="light"] .icon-sun  { opacity: 0; }
+[data-theme="light"] .icon-moon { opacity: 0.8; }
+
+/* ── Buttons ──────────────────────────────────── */
+.tb-btn {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, color 0.3s;
+  white-space: nowrap;
+}
+
+.tb-btn:hover { border-color: var(--accent); background: var(--surface3); }
+
+.tb-btn.primary {
+  background: linear-gradient(135deg, var(--accent) 0%, #5954d9 100%);
+  border: none;
+  color: #fff;
+  box-shadow: 0 2px 12px var(--accent-glow);
+}
+
+.tb-btn.primary:hover { opacity: 0.9; }
+
+.tb-btn.edit-active {
+  background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+  border: none;
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(255,107,107,0.3);
+}
+
+/* ── Main Layout ──────────────────────────────── */
+.main {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ── Stage ────────────────────────────────────── */
+.stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+  overflow: hidden;
+  position: relative;
+  background: var(--bg);
+  background-image:
+    radial-gradient(ellipse at 20% 50%, rgba(108,99,255,0.04) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 20%, rgba(56,217,245,0.03) 0%, transparent 50%);
+  transition: background 0.3s ease, padding 0.3s ease;
+}
+
+/* BG image overlay */
+.stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--bg-template, none);
+  background-size: cover;
+  background-position: center;
+  opacity: var(--bg-opacity, 0);
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+/* ── Slide ────────────────────────────────────── */
+.slide {
+  display: none;
+  position: absolute;
+  width: min(860px, 92vw);
+  max-height: calc(100vh - 130px);
+  background: var(--slide-bg);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  flex-direction: column;
+  box-shadow: var(--shadow);
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s;
+}
+
+.slide.active {
+  display: flex;
+  animation: slideIn 320ms cubic-bezier(0.2,0.9,0.2,1) both;
+}
+
+.slide.exit {
+  animation: slideOut 220ms ease-in both;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.975); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes slideOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-12px) scale(0.975); }
+}
+
+/* BG image on slide */
+.slide::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: var(--slide-bg-img, none);
+  background-size: cover;
+  background-position: center;
+  opacity: var(--slide-bg-opacity, 0);
+  pointer-events: none;
+  z-index: 0;
+  border-radius: 18px;
+  transition: opacity 0.3s ease;
+}
+
+/* ── Slide Inner ──────────────────────────────── */
+.slide-inner {
+  flex: 1;
+  overflow: hidden;
+  padding: var(--slide-padding, 28px 32px 16px);
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.slide-header { flex-shrink: 0; margin-bottom: 12px; }
+
+.slide-type-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 9px;
+  border-radius: 5px;
+  background: var(--tag-bg);
+  border: 1px solid var(--tag-border);
+  font-size: 0.65rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tag-color);
+  margin-bottom: 10px;
+}
+
+.slide-title {
+  font-family: 'Syne', sans-serif;
+  font-size: var(--title-size, 1.65rem);
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  margin-bottom: 5px;
+  color: var(--text);
+  transition: font-size 0.2s, color 0.3s;
+}
+
+.slide-subtitle {
+  font-size: var(--body-size, 0.88rem);
+  color: var(--muted);
+  line-height: 1.5;
+  transition: font-size 0.2s, color 0.3s;
+}
+
+/* ── Figure ───────────────────────────────────── */
+.slide-fig {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 14px;
+  flex-shrink: 0;
+  height: var(--img-height, 160px);
+  transition: height 0.2s ease, border-color 0.3s;
+}
+
+.slide-fig img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Steps ────────────────────────────────────── */
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  list-style: none;
+  flex: 1;
+  overflow: hidden;
+}
+
+.step-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: opacity .28s ease, transform .28s ease, border-color .2s, background 0.3s;
+  flex-shrink: 0;
+}
+
+.step-item.visible {
+  opacity: 1;
+  transform: translateX(0);
+  border-color: rgba(108,99,255,0.2);
+}
+
+.step-num {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  background: linear-gradient(135deg, var(--accent), #5954d9);
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 0.75rem;
+  font-family: 'JetBrains Mono', monospace;
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #fff;
+}
+
+.step-content h3 {
+  font-size: var(--step-heading-size, 0.88rem);
+  font-weight: 600;
+  margin-bottom: 2px;
+  font-family: 'Syne', sans-serif;
+  transition: font-size 0.2s;
+}
+
+.step-content p {
+  font-size: var(--body-size, 0.82rem);
+  color: var(--muted);
+  line-height: 1.5;
+  transition: font-size 0.2s, color 0.3s;
+}
+
+.step-content a { color: var(--accent2); text-decoration: none; }
+.step-content a:hover { text-decoration: underline; }
+.step-content strong { color: var(--text); font-weight: 600; }
+.step-content em { color: var(--accent2); font-style: italic; }
+
+/* ── Notes ────────────────────────────────────── */
+.slide-notes {
+  flex-shrink: 0;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--notes-bg);
+  border: 1px solid var(--notes-border);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.6;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+/* ── Slide Footer ─────────────────────────────── */
+.slide-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  border-top: 1px solid var(--border);
+  background: var(--foot-bg);
+  position: relative;
+  z-index: 1;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.slide-nav-btns { display: flex; gap: 6px; }
+
+.snav {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 0.9rem;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: border-color .15s, background .15s, color 0.3s;
+}
+.snav:hover:not(:disabled) { border-color: var(--accent); background: var(--surface3); }
+.snav:disabled { opacity: 0.25; cursor: default; }
+
+.prog-dots {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 340px;
+}
+
+.prog-dot {
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  transition: width .3s cubic-bezier(0.34,1.56,0.64,1), background .3s;
+  cursor: pointer;
+  border: none;
+}
+.prog-dot:hover { background: var(--muted); }
+.prog-dot.active { width: 18px; background: var(--accent); }
+
+.step-hint {
+  font-size: 0.72rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+kbd {
+  display: inline-block;
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.65rem;
+  background: var(--surface2);
+  color: var(--muted);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+/* ── State ────────────────────────────────────── */
+.center-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--muted);
+  text-align: center;
+  height: 100%;
+  font-size: 0.9rem;
+}
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─────────────────────────────────────────────── */
+/* ── EDIT PANEL ────────────────────────────────── */
+/* ─────────────────────────────────────────────── */
+.edit-panel {
+  width: 0;
+  overflow: hidden;
+  transition: width 0.35s cubic-bezier(0.4,0,0.2,1);
+  flex-shrink: 0;
+  background: var(--edit-panel-bg);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.edit-panel.open {
+  width: 300px;
+  overflow-y: auto;
+}
+
+.edit-panel-inner {
+  width: 300px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.ep-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+
+.ep-section {
+  background: var(--edit-section-bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.ep-section-head {
+  padding: 10px 14px;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  transition: background 0.3s, border-color 0.3s;
+}
+
+.ep-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+.ep-row { display: flex; flex-direction: column; gap: 5px; }
+.ep-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ep-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  color: var(--accent2);
+}
+
+/* Range slider */
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface3);
+  outline: none;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border-radius: 8px;
+  background: var(--accent);
+  border: none;
+  cursor: pointer;
+}
+
+/* Text input */
+.ep-input {
+  width: 100%;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s, background 0.3s;
+}
+.ep-input:focus { border-color: var(--accent); }
+textarea.ep-input { resize: vertical; min-height: 60px; }
+
+/* Color swatches */
+.swatch-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.swatch {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+.swatch:hover { transform: scale(1.1); }
+.swatch.active { border-color: var(--text); }
+
+/* Theme preset buttons */
+.theme-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+.preset-btn {
+  padding: 5px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: 'Instrument Sans', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.preset-btn:hover { border-color: var(--accent); }
+.preset-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Upload area */
+.upload-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  font-size: 0.78rem;
+  color: var(--muted);
+  position: relative;
+}
+.upload-zone:hover { border-color: var(--accent); background: var(--tag-bg); }
+.upload-zone input[type="file"] {
+  position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+}
+.upload-zone .upload-icon { font-size: 1.4rem; margin-bottom: 4px; }
+.upload-preview {
+  width: 100%;
+  height: 80px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+  display: none;
+  margin-top: 8px;
+}
+
+/* Save button */
+.ep-save-btn {
+  width: 100%;
+  padding: 11px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent), #5954d9);
+  border: none;
+  color: #fff;
+  font-family: 'Syne', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+  box-shadow: 0 4px 16px var(--accent-glow);
+}
+.ep-save-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.ep-save-btn:active { transform: translateY(0); }
+
+.ep-saved-badge {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(56,217,245,0.1);
+  border: 1px solid rgba(56,217,245,0.2);
+  color: var(--accent2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  animation: fadeIn 0.3s ease;
+}
+.ep-saved-badge.show { display: flex; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* ── Fullscreen ───────────────────────────────── */
+.stage.fullscreen {
+  padding: 0;
+}
+.stage.fullscreen .slide {
+  width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  border: none;
+}
+
+/* ── Responsive ───────────────────────────────── */
+@media (max-width: 600px) {
+  .stage { padding: 12px; }
+  .slide-inner { padding: 20px 18px 12px; }
+  .slide-title { font-size: 1.4rem; }
+  .step-hint { display: none; }
+  .edit-panel.open { width: 100%; }
+}
+
+/* ── Slide content edit highlights ───────────── */
+.edit-mode .slide-title,
+.edit-mode .slide-subtitle,
+.edit-mode .step-content h3,
+.edit-mode .step-content p {
+  outline: 1px dashed rgba(108,99,255,0.3);
+  border-radius: 4px;
+  cursor: text;
+}
+
+.edit-mode .step-item { pointer-events: auto; opacity: 1 !important; transform: none !important; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="tb-left">
+    <div class="tb-brand">◈ DeckView</div>
+    <div class="tb-counter" id="counter">– / –</div>
+  </div>
+  <div class="tb-actions">
+    <div class="step-hint" id="kbHint">
+      <kbd>←</kbd><kbd>→</kbd> navigate &nbsp;<kbd>Space</kbd> step
+    </div>
+    <label class="theme-toggle" title="Toggle light/dark mode">
+      <div class="theme-toggle-track">
+        <div class="theme-toggle-icons">
+          <span class="theme-icon icon-sun">☀</span>
+          <span class="theme-icon icon-moon">◑</span>
+        </div>
+        <div class="theme-toggle-thumb"></div>
+      </div>
+    </label>
+    <button class="tb-btn" id="editBtn">✏ Edit</button>
+    <button class="tb-btn" id="fullscreenBtn" title="Fullscreen">⛶</button>
+  </div>
+</div>
+
+<div class="main">
+  <!-- Stage -->
+  <div class="stage" id="stage">
+    <div class="center-state" id="loadingState">
+      <div class="spinner"></div>
+      <div>Loading slides…</div>
+    </div>
+  </div>
+
+  <!-- Edit Panel -->
+  <div class="edit-panel" id="editPanel">
+    <div class="edit-panel-inner">
+      <div class="ep-title">✏ Edit Mode</div>
+
+      <!-- Theme Presets -->
+      <div class="ep-section">
+        <div class="ep-section-head">🎨 Theme Preset</div>
+        <div class="ep-body">
+          <div class="theme-presets" id="themePresets">
+            <button class="preset-btn active" data-preset="default" onclick="applyPreset('default',this)">Default</button>
+            <button class="preset-btn" data-preset="ocean" onclick="applyPreset('ocean',this)">Ocean</button>
+            <button class="preset-btn" data-preset="forest" onclick="applyPreset('forest',this)">Forest</button>
+            <button class="preset-btn" data-preset="sunset" onclick="applyPreset('sunset',this)">Sunset</button>
+            <button class="preset-btn" data-preset="mono" onclick="applyPreset('mono',this)">Mono</button>
+            <button class="preset-btn" data-preset="rose" onclick="applyPreset('rose',this)">Rose</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accent Color -->
+      <div class="ep-section">
+        <div class="ep-section-head">🖌 Accent Color</div>
+        <div class="ep-body">
+          <div class="swatch-row" id="accentSwatches">
+            <div class="swatch active" style="background:#6c63ff" data-color="#6c63ff" onclick="setAccent('#6c63ff',this)"></div>
+            <div class="swatch" style="background:#38d9f5" data-color="#38d9f5" onclick="setAccent('#38d9f5',this)"></div>
+            <div class="swatch" style="background:#f43f5e" data-color="#f43f5e" onclick="setAccent('#f43f5e',this)"></div>
+            <div class="swatch" style="background:#10b981" data-color="#10b981" onclick="setAccent('#10b981',this)"></div>
+            <div class="swatch" style="background:#f59e0b" data-color="#f59e0b" onclick="setAccent('#f59e0b',this)"></div>
+            <div class="swatch" style="background:#ec4899" data-color="#ec4899" onclick="setAccent('#ec4899',this)"></div>
+            <div class="swatch" style="background:#8b5cf6" data-color="#8b5cf6" onclick="setAccent('#8b5cf6',this)"></div>
+            <div class="swatch" style="background:#06b6d4" data-color="#06b6d4" onclick="setAccent('#06b6d4',this)"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typography -->
+      <div class="ep-section">
+        <div class="ep-section-head">✦ Typography</div>
+        <div class="ep-body">
+          <div class="ep-row">
+            <div class="ep-label">Title size <span class="ep-val" id="titleSizeVal">1.65rem</span></div>
+            <input type="range" id="titleSize" min="1" max="3.5" step="0.05" value="1.65" oninput="updateTypo()">
+          </div>
+          <div class="ep-row">
+            <div class="ep-label">Body size <span class="ep-val" id="bodySizeVal">0.85rem</span></div>
+            <input type="range" id="bodySize" min="0.6" max="1.4" step="0.02" value="0.85" oninput="updateTypo()">
+          </div>
+          <div class="ep-row">
+            <div class="ep-label">Heading size <span class="ep-val" id="stepHdSizeVal">0.88rem</span></div>
+            <input type="range" id="stepHdSize" min="0.6" max="1.4" step="0.02" value="0.88" oninput="updateTypo()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Spacing -->
+      <div class="ep-section">
+        <div class="ep-section-head">↔ Spacing</div>
+        <div class="ep-body">
+          <div class="ep-row">
+            <div class="ep-label">Slide padding <span class="ep-val" id="paddingVal">28px</span></div>
+            <input type="range" id="slidePadding" min="10" max="60" step="2" value="28" oninput="updateSpacing()">
+          </div>
+          <div class="ep-row">
+            <div class="ep-label">Slide border radius <span class="ep-val" id="radiusVal">18px</span></div>
+            <input type="range" id="slideRadius" min="0" max="36" step="2" value="18" oninput="updateSpacing()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Image / Background -->
+      <div class="ep-section">
+        <div class="ep-section-head">🖼 Background Image</div>
+        <div class="ep-body">
+          <div class="upload-zone" id="bgUploadZone">
+            <input type="file" id="bgUpload" accept="image/*" onchange="handleBgUpload(event)">
+            <div class="upload-icon">🌄</div>
+            <div>Drop or click to set background</div>
+          </div>
+          <img id="bgPreview" class="upload-preview" alt="BG preview">
+          <div class="ep-row" id="bgOpacityRow" style="display:none">
+            <div class="ep-label">Opacity <span class="ep-val" id="bgOpacityVal">15%</span></div>
+            <input type="range" id="bgOpacity" min="0" max="100" step="1" value="15" oninput="updateBgOpacity()">
+          </div>
+          <div class="ep-row" id="bgApplyRow" style="display:none">
+            <div class="ep-label">Apply to</div>
+            <div class="theme-presets">
+              <button class="preset-btn active" id="bgApplySlide" onclick="setBgApply('slide',this)">Slides</button>
+              <button class="preset-btn" id="bgApplyStage" onclick="setBgApply('stage',this)">Stage</button>
+            </div>
+          </div>
+          <button class="preset-btn" id="clearBgBtn" style="display:none;color:#f43f5e;border-color:rgba(244,63,94,0.3);" onclick="clearBg()">✕ Clear image</button>
+        </div>
+      </div>
+
+      <!-- Slide image size -->
+      <div class="ep-section">
+        <div class="ep-section-head">📐 Content Image Size</div>
+        <div class="ep-body">
+          <div class="ep-row">
+            <div class="ep-label">Image height <span class="ep-val" id="imgHeightVal">160px</span></div>
+            <input type="range" id="imgHeight" min="60" max="360" step="4" value="160" oninput="updateImgHeight()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Content Edit -->
+      <div class="ep-section">
+        <div class="ep-section-head">📝 Edit Content</div>
+        <div class="ep-body">
+          <div class="ep-row">
+            <div class="ep-label">Slide Title</div>
+            <input type="text" id="editTitle" class="ep-input" placeholder="Slide title…" oninput="updateSlideContent()">
+          </div>
+          <div class="ep-row">
+            <div class="ep-label">Subtitle / Description</div>
+            <textarea id="editSubtitle" class="ep-input" placeholder="Subtitle…" oninput="updateSlideContent()"></textarea>
+          </div>
+          <div class="ep-row">
+            <div class="ep-label">Notes</div>
+            <textarea id="editNotes" class="ep-input" placeholder="Speaker notes…" oninput="updateSlideContent()"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save -->
+      <button class="ep-save-btn" onclick="saveEdits()">💾 Save Changes</button>
+      <div class="ep-saved-badge" id="savedBadge">✓ Changes saved!</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ─── Utilities ──────────────────────────────────── */
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+function md(text) {
+  if (!text) return '';
+  return esc(text)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\n/g, '<br>');
+}
+function safeSrc(src) {
+  if (!src) return null;
+  try {
+    const u = new URL(src, location.href);
+    return (u.protocol==='https:'||u.protocol==='http:') ? u.href : null;
+  } catch { return null; }
+}
+
+/* ─── State ──────────────────────────────────────── */
+let allSlides   = [];
+let slideData   = [];  // raw data
+let slideIndex  = 0;
+let stepIndex   = -1;
+let currentSteps = [];
+let bgApplyTarget = 'slide';
+let bgDataUrl = null;
+
+/* ─── Theme Toggle ───────────────────────────────── */
+const html = document.documentElement;
+document.querySelector('.theme-toggle').addEventListener('click', () => {
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+});
+
+/* ─── Theme Presets ──────────────────────────────── */
+const presets = {
+  default: { accent: '#6c63ff', accent2: '#38d9f5' },
+  ocean:   { accent: '#0077b6', accent2: '#00b4d8' },
+  forest:  { accent: '#2d6a4f', accent2: '#52b788' },
+  sunset:  { accent: '#e76f51', accent2: '#f4a261' },
+  mono:    { accent: '#555577', accent2: '#aaaacc' },
+  rose:    { accent: '#e11d48', accent2: '#fb7185' },
+};
+
+function applyPreset(name, btn) {
+  const p = presets[name];
+  if (!p) return;
+  document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  setAccentDirect(p.accent, p.accent2);
+}
+
+function setAccent(color, el) {
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  setAccentDirect(color, null);
+}
+
+function setAccentDirect(accent, accent2) {
+  const root = document.documentElement;
+  root.style.setProperty('--accent', accent);
+  if (accent2) root.style.setProperty('--accent2', accent2);
+  // update glow
+  const hex = accent.replace('#','');
+  const r=parseInt(hex.slice(0,2),16), g=parseInt(hex.slice(2,4),16), b=parseInt(hex.slice(4,6),16);
+  root.style.setProperty('--accent-glow', `rgba(${r},${g},${b},0.25)`);
+}
+
+/* ─── Typography ─────────────────────────────────── */
+function updateTypo() {
+  const ts = parseFloat(document.getElementById('titleSize').value);
+  const bs = parseFloat(document.getElementById('bodySize').value);
+  const hs = parseFloat(document.getElementById('stepHdSize').value);
+
+  document.getElementById('titleSizeVal').textContent = ts.toFixed(2) + 'rem';
+  document.getElementById('bodySizeVal').textContent  = bs.toFixed(2) + 'rem';
+  document.getElementById('stepHdSizeVal').textContent = hs.toFixed(2) + 'rem';
+
+  const root = document.documentElement;
+  root.style.setProperty('--title-size', ts + 'rem');
+  root.style.setProperty('--body-size',  bs + 'rem');
+  root.style.setProperty('--step-heading-size', hs + 'rem');
+}
+
+/* ─── Spacing ────────────────────────────────────── */
+function updateSpacing() {
+  const p = parseInt(document.getElementById('slidePadding').value);
+  const r = parseInt(document.getElementById('slideRadius').value);
+
+  document.getElementById('paddingVal').textContent = p + 'px';
+  document.getElementById('radiusVal').textContent  = r + 'px';
+
+  const root = document.documentElement;
+  root.style.setProperty('--slide-padding', `${p}px ${p+4}px ${Math.round(p*0.5)}px`);
+  document.querySelectorAll('.slide').forEach(s => {
+    s.style.borderRadius = r + 'px';
+    s.style.setProperty('--inner-radius', (r-2) + 'px');
+  });
+}
+
+/* ─── Image Height ───────────────────────────────── */
+function updateImgHeight() {
+  const h = parseInt(document.getElementById('imgHeight').value);
+  document.getElementById('imgHeightVal').textContent = h + 'px';
+  document.documentElement.style.setProperty('--img-height', h + 'px');
+}
+
+/* ─── Background Image ───────────────────────────── */
+function handleBgUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    bgDataUrl = ev.target.result;
+    const preview = document.getElementById('bgPreview');
+    preview.src = bgDataUrl;
+    preview.style.display = 'block';
+    document.getElementById('bgOpacityRow').style.display = 'flex';
+    document.getElementById('bgApplyRow').style.display   = 'flex';
+    document.getElementById('clearBgBtn').style.display   = 'block';
+    applyBg();
+  };
+  reader.readAsDataURL(file);
+}
+
+function applyBg() {
+  if (!bgDataUrl) return;
+  const opacity = parseInt(document.getElementById('bgOpacity').value) / 100;
+  if (bgApplyTarget === 'stage') {
+    document.getElementById('stage').style.setProperty('--bg-template', `url("${bgDataUrl}")`);
+    document.getElementById('stage').style.setProperty('--bg-opacity', opacity);
+    document.querySelectorAll('.slide').forEach(s => {
+      s.style.setProperty('--slide-bg-img', 'none');
+      s.style.setProperty('--slide-bg-opacity', 0);
+    });
+  } else {
+    document.getElementById('stage').style.setProperty('--bg-template', 'none');
+    document.getElementById('stage').style.setProperty('--bg-opacity', 0);
+    document.querySelectorAll('.slide').forEach(s => {
+      s.style.setProperty('--slide-bg-img', `url("${bgDataUrl}")`);
+      s.style.setProperty('--slide-bg-opacity', opacity);
+    });
+  }
+}
+
+function updateBgOpacity() {
+  const v = parseInt(document.getElementById('bgOpacity').value);
+  document.getElementById('bgOpacityVal').textContent = v + '%';
+  applyBg();
+}
+
+function setBgApply(target, btn) {
+  bgApplyTarget = target;
+  document.querySelectorAll('#bgApplyRow .preset-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyBg();
+}
+
+function clearBg() {
+  bgDataUrl = null;
+  document.getElementById('bgPreview').style.display = 'none';
+  document.getElementById('bgOpacityRow').style.display = 'none';
+  document.getElementById('bgApplyRow').style.display   = 'none';
+  document.getElementById('clearBgBtn').style.display   = 'none';
+  document.getElementById('bgUpload').value = '';
+  document.getElementById('stage').style.setProperty('--bg-template', 'none');
+  document.getElementById('stage').style.setProperty('--bg-opacity', 0);
+  document.querySelectorAll('.slide').forEach(s => {
+    s.style.setProperty('--slide-bg-img', 'none');
+    s.style.setProperty('--slide-bg-opacity', 0);
+  });
+}
+
+/* ─── Content Edit ───────────────────────────────── */
+function syncEditFields() {
+  const data = slideData[slideIndex];
+  if (!data) return;
+  document.getElementById('editTitle').value    = data.title    || '';
+  document.getElementById('editSubtitle').value = data.subtitle || '';
+  document.getElementById('editNotes').value    = data.notes    || '';
+}
+
+function updateSlideContent() {
+  const slide = allSlides[slideIndex];
+  if (!slide) return;
+  const newTitle    = document.getElementById('editTitle').value;
+  const newSubtitle = document.getElementById('editSubtitle').value;
+  const newNotes    = document.getElementById('editNotes').value;
+
+  // Update DOM
+  const titleEl = slide.querySelector('.slide-title');
+  const subEl   = slide.querySelector('.slide-subtitle');
+  const notesEl = slide.querySelector('.slide-notes');
+
+  if (titleEl)  titleEl.textContent  = newTitle;
+  if (subEl)    subEl.textContent    = newSubtitle;
+  if (notesEl)  notesEl.innerHTML    = md(newNotes);
+
+  // Update data
+  slideData[slideIndex].title    = newTitle;
+  slideData[slideIndex].subtitle = newSubtitle;
+  slideData[slideIndex].notes    = newNotes;
+}
+
+/* ─── Save ───────────────────────────────────────── */
+function saveEdits() {
+  try {
+    localStorage.setItem('deckviewer_edits', JSON.stringify({
+      slideData,
+      accent:   getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(),
+      accent2:  getComputedStyle(document.documentElement).getPropertyValue('--accent2').trim(),
+      titleSize: document.getElementById('titleSize').value,
+      bodySize:  document.getElementById('bodySize').value,
+      stepHdSize:document.getElementById('stepHdSize').value,
+      padding:   document.getElementById('slidePadding').value,
+      radius:    document.getElementById('slideRadius').value,
+      imgHeight: document.getElementById('imgHeight').value,
+    }));
+  } catch(_){}
+  const badge = document.getElementById('savedBadge');
+  badge.classList.add('show');
+  setTimeout(() => badge.classList.remove('show'), 2500);
+}
+
+/* ─── Edit Panel Toggle ──────────────────────────── */
+const editBtn   = document.getElementById('editBtn');
+const editPanel = document.getElementById('editPanel');
+let editOpen = false;
+
+editBtn.addEventListener('click', () => {
+  editOpen = !editOpen;
+  editPanel.classList.toggle('open', editOpen);
+  editBtn.textContent = editOpen ? '✕ Close' : '✏ Edit';
+  editBtn.classList.toggle('edit-active', editOpen);
+  document.querySelector('.stage').classList.toggle('edit-mode', editOpen);
+  if (editOpen) syncEditFields();
+});
+
+/* ─── Build Slide DOM ────────────────────────────── */
+function buildSlide(data, idx) {
+  const el = document.createElement('div');
+  el.className = 'slide';
+  el.dataset.index = idx;
+
+  const inner = document.createElement('div');
+  inner.className = 'slide-inner';
+
+  // Header
+  const header = document.createElement('div');
+  header.className = 'slide-header';
+
+  const tag = document.createElement('div');
+  tag.className = 'slide-type-tag';
+  tag.textContent = data.type || 'content';
+  header.appendChild(tag);
+
+  const h1 = document.createElement('h1');
+  h1.className = 'slide-title';
+  h1.textContent = data.title || 'Untitled';
+  header.appendChild(h1);
+
+  if (data.subtitle) {
+    const sub = document.createElement('p');
+    sub.className = 'slide-subtitle';
+    sub.textContent = data.subtitle;
+    header.appendChild(sub);
+  }
+
+  inner.appendChild(header);
+
+  // Figure image
+  if (data.image_ref) {
+    const src = safeSrc(data.image_ref);
+    if (src) {
+      const fig = document.createElement('div');
+      fig.className = 'slide-fig';
+      const img = document.createElement('img');
+      img.src = src; img.alt = data.title||''; img.loading = 'lazy';
+      fig.appendChild(img);
+      inner.appendChild(fig);
+    }
+  }
+
+  // Steps
+  if (data.steps && data.steps.length) {
+    const ul = document.createElement('ul');
+    ul.className = 'steps-list';
+    data.steps.forEach(step => {
+      const li = document.createElement('li');
+      li.className = 'step-item';
+      li.innerHTML = `
+        <div class="step-num">${esc(String(step.number||''))}</div>
+        <div class="step-content">
+          <h3>${esc(step.heading||'')}</h3>
+          <p>${md(step.content||'')}</p>
+        </div>`;
+      ul.appendChild(li);
+    });
+    inner.appendChild(ul);
+  } else if (data.notes && !(data.steps && data.steps.length)) {
+    const p = document.createElement('p');
+    p.style.cssText = 'color:var(--muted);font-style:italic;margin-top:6px;font-size:0.9rem;';
+    p.textContent = data.notes;
+    inner.appendChild(p);
+  }
+
+  // Notes (when steps also present)
+  if (data.notes && data.steps && data.steps.length) {
+    const notes = document.createElement('div');
+    notes.className = 'slide-notes';
+    notes.innerHTML = md(data.notes);
+    inner.appendChild(notes);
+  }
+
+  // Footer
+  const foot = document.createElement('div');
+  foot.className = 'slide-foot';
+
+  const navBtns = document.createElement('div');
+  navBtns.className = 'slide-nav-btns';
+  const prevB = document.createElement('button');
+  prevB.className = 'snav'; prevB.id = `prevBtn_${idx}`; prevB.textContent = '←';
+  const nextB = document.createElement('button');
+  nextB.className = 'snav'; nextB.id = `nextBtn_${idx}`; nextB.textContent = '→';
+  navBtns.appendChild(prevB);
+  navBtns.appendChild(nextB);
+
+  const hint = document.createElement('div');
+  hint.className = 'step-hint';
+  hint.innerHTML = '<kbd>Space</kbd> next step';
+
+  foot.appendChild(navBtns);
+  foot.appendChild(hint);
+
+  el.appendChild(inner);
+  el.appendChild(foot);
+  return el;
+}
+
+/* ─── Navigation ─────────────────────────────────── */
+function goTo(idx, skipStepReset) {
+  if (idx < 0 || idx >= allSlides.length) return;
+
+  const prev = allSlides[slideIndex];
+  if (prev && prev.classList.contains('active') && idx !== slideIndex) {
+    prev.classList.add('exit');
+    setTimeout(() => prev.classList.remove('active', 'exit'), 280);
+  }
+
+  slideIndex = idx;
+  const next = allSlides[slideIndex];
+  next.classList.add('active');
+
+  // In edit mode, show all steps; otherwise reset
+  currentSteps = Array.from(next.querySelectorAll('.step-item'));
+  if (editOpen) {
+    currentSteps.forEach(s => s.classList.add('visible'));
+    stepIndex = currentSteps.length - 1;
+  } else if (!skipStepReset) {
+    currentSteps.forEach(s => s.classList.remove('visible'));
+    stepIndex = -1;
+  }
+
+  updateCounter();
+  updateDots();
+  updateNavButtons();
+  if (editOpen) syncEditFields();
+}
+
+function showNextStep() {
+  if (editOpen) { goTo(slideIndex + 1); return; }
+  if (stepIndex < currentSteps.length - 1) {
+    stepIndex++;
+    currentSteps[stepIndex].classList.add('visible');
+    updateNavButtons();
+  } else {
+    // All steps shown → go to next slide
+    goTo(slideIndex + 1);
+  }
+}
+
+function showPrevStep() {
+  if (editOpen) { goTo(slideIndex - 1); return; }
+
+  if (stepIndex >= 0) {
+    // Hide the current last-visible step
+    currentSteps[stepIndex].classList.remove('visible');
+    stepIndex--;
+    updateNavButtons();
+  } else if (slideIndex > 0) {
+    // At slide start, no steps visible → go to prev slide, show all its steps
+    const targetIdx = slideIndex - 1;
+    const prev = allSlides[slideIndex];
+    if (prev.classList.contains('active')) {
+      prev.classList.add('exit');
+      setTimeout(() => prev.classList.remove('active','exit'), 280);
+    }
+    slideIndex = targetIdx;
+    const target = allSlides[slideIndex];
+    target.classList.add('active');
+
+    currentSteps = Array.from(target.querySelectorAll('.step-item'));
+    currentSteps.forEach(s => s.classList.add('visible'));
+    stepIndex = currentSteps.length - 1;
+
+    updateCounter();
+    updateDots();
+    updateNavButtons();
+    if (editOpen) syncEditFields();
+  }
+}
+
+function updateCounter() {
+  document.getElementById('counter').textContent = `${slideIndex+1} / ${allSlides.length}`;
+}
+
+function updateDots() {
+  document.querySelectorAll('.prog-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === slideIndex);
+  });
+}
+
+function updateNavButtons() {
+  allSlides.forEach((slide, i) => {
+    const p = slide.querySelector(`#prevBtn_${i}`);
+    const n = slide.querySelector(`#nextBtn_${i}`);
+    if (!p || !n) return;
+    // prev: disabled only if first slide AND no steps revealed
+    p.disabled = (slideIndex === 0 && stepIndex < 0);
+    // next: never disabled (let it wrap to end state)
+    n.disabled = false;
+  });
+}
+
+/* ─── Keyboard & Click ───────────────────────────── */
+document.addEventListener('keydown', e => {
+  const tag = e.target.tagName.toLowerCase();
+  if (['input','textarea','select'].includes(tag)) return;
+  if (e.key==='ArrowRight'||e.key===' '||e.key==='Enter') { e.preventDefault(); showNextStep(); }
+  else if (e.key==='ArrowLeft')  { e.preventDefault(); showPrevStep(); }
+  else if (e.key==='ArrowUp')    { e.preventDefault(); goTo(slideIndex-1); }
+  else if (e.key==='ArrowDown')  { e.preventDefault(); goTo(slideIndex+1); }
+  else if (e.key==='Escape' && editOpen) {
+    editOpen = false;
+    editPanel.classList.remove('open');
+    editBtn.textContent = '✏ Edit';
+    editBtn.classList.remove('edit-active');
+    document.querySelector('.stage').classList.remove('edit-mode');
+  }
+});
+
+document.getElementById('stage').addEventListener('click', e => {
+  const tag = e.target.tagName.toLowerCase();
+  if (['a','button','input','select','label','kbd'].includes(tag)) return;
+  if (e.target.closest('.edit-panel')) return;
+  if (editOpen) return;
+  showNextStep();
+});
+
+/* ─── Fullscreen ─────────────────────────────────── */
+document.getElementById('fullscreenBtn').addEventListener('click', () => {
+  const stage = document.getElementById('stage');
+  if (!document.fullscreenElement) {
+    stage.requestFullscreen?.();
+    document.getElementById('fullscreenBtn').textContent = '✕';
+  } else {
+    document.exitFullscreen?.();
+    document.getElementById('fullscreenBtn').textContent = '⛶';
+  }
+});
+
+document.addEventListener('fullscreenchange', () => {
+  const stage = document.getElementById('stage');
+  stage.classList.toggle('fullscreen', !!document.fullscreenElement);
+  if (!document.fullscreenElement) document.getElementById('fullscreenBtn').textContent = '⛶';
+});
+
+/* ─── Init ───────────────────────────────────────── */
+async function init() {
+  const stage = document.getElementById('stage');
+
+  try {
+    const r = await fetch('final.json', { cache: 'no-cache' });
+    if (!r.ok) throw new Error('Could not load final.json — HTTP ' + r.status);
+    const manifest = await r.json();
+    const rawSlides = manifest.slides || manifest;
+    if (!Array.isArray(rawSlides) || !rawSlides.length) throw new Error('No slides found.');
+
+    slideData = rawSlides.slice().sort((a,b) => {
+      const oa=Number(a.order), ob=Number(b.order);
+      if(!isFinite(oa)&&!isFinite(ob)) return 0;
+      if(!isFinite(oa)) return 1; if(!isFinite(ob)) return -1;
+      return oa-ob;
+    });
+
+    // Try restore saved edits
+    try {
+      const saved = JSON.parse(localStorage.getItem('deckviewer_edits'));
+      if (saved && saved.slideData) {
+        saved.slideData.forEach((sd, i) => { if (slideData[i]) Object.assign(slideData[i], sd); });
+        if (saved.accent) setAccentDirect(saved.accent, saved.accent2);
+        if (saved.titleSize) { document.getElementById('titleSize').value = saved.titleSize; }
+        if (saved.bodySize)  { document.getElementById('bodySize').value  = saved.bodySize;  }
+        if (saved.stepHdSize){ document.getElementById('stepHdSize').value= saved.stepHdSize;}
+        if (saved.padding)   { document.getElementById('slidePadding').value = saved.padding; }
+        if (saved.radius)    { document.getElementById('slideRadius').value  = saved.radius;  }
+        if (saved.imgHeight) { document.getElementById('imgHeight').value    = saved.imgHeight; }
+        updateTypo(); updateSpacing(); updateImgHeight();
+      }
+    } catch(_) {}
+
+    stage.innerHTML = '';
+
+    const deck = document.createElement('div');
+    deck.style.cssText = 'position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+    // Progress dots wrapper (rendered in stage, above slide)
+    const dotsWrap = document.createElement('div');
+    dotsWrap.style.cssText = 'position:absolute;bottom:14px;left:50%;transform:translateX(-50%);z-index:50;';
+    const dotsBar = document.createElement('div');
+    dotsBar.className = 'prog-dots';
+    dotsWrap.appendChild(dotsBar);
+
+    slideData.forEach((data, idx) => {
+      const slide = buildSlide(data, idx);
+      deck.appendChild(slide);
+      allSlides.push(slide);
+
+      // Wire nav buttons
+      const prevB = slide.querySelector(`#prevBtn_${idx}`);
+      const nextB = slide.querySelector(`#nextBtn_${idx}`);
+      if (prevB) prevB.addEventListener('click', e => { e.stopPropagation(); showPrevStep(); });
+      if (nextB) nextB.addEventListener('click', e => { e.stopPropagation(); showNextStep(); });
+
+      const dot = document.createElement('button');
+      dot.className = 'prog-dot';
+      dot.title = data.title || `Slide ${idx+1}`;
+      dot.addEventListener('click', e => { e.stopPropagation(); goTo(idx); });
+      dotsBar.appendChild(dot);
+    });
+
+    // Append dots inside each slide footer
+    slideData.forEach((_, idx) => {
+      const slide = allSlides[idx];
+      const foot  = slide.querySelector('.slide-foot');
+      if (!foot) return;
+      const dotClone = dotsBar.cloneNode(true);
+      dotClone.querySelectorAll('.prog-dot').forEach((dot, i) => {
+        dot.addEventListener('click', e => { e.stopPropagation(); goTo(i); });
+      });
+      foot.appendChild(dotClone);
+    });
+
+    stage.appendChild(deck);
+    goTo(0);
+
+  } catch(err) {
+    stage.innerHTML = `
+      <div class="center-state">
+        <div style="font-size:2rem;">⚠</div>
+        <div style="font-weight:600;color:var(--text)">Failed to load slides</div>
+        <div style="font-size:0.85rem;">${esc(err.message)}</div>
+        <button class="tb-btn" onclick="location.reload()">Retry</button>
+      </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

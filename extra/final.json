@@ -1,0 +1,237 @@
+{
+  "slides": [
+    {
+      "id": "slide1",
+      "order": 1,
+      "type": "content",
+      "title": "Mahalanobis Distance for Robust Classification",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Introduces the core method: using Mahalanobis distance to improve classification robustness, especially for detecting out-of-distribution samples.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Problem Motivation",
+          "content": "Traditional classifiers like Softmax struggle with out-of-distribution (OOD) data. This paper proposes Mahalanobis distance-based methods to detect and handle such cases."
+        },
+        {
+          "number": 2,
+          "heading": "Key Insight",
+          "content": "Mahalanobis distance measures how far a sample is from class means in feature space, accounting for covariance structure for better OOD detection."
+        },
+        {
+          "number": 3,
+          "heading": "Method Overview",
+          "content": "The paper introduces two main algorithms: one for confidence scoring and another for incremental learning, both leveraging Mahalanobis distance."
+        },
+        {
+          "number": 4,
+          "heading": "Impact",
+          "content": "This approach improves accuracy and robustness on datasets like CIFAR-10, SVHN, and TinyImageNet, especially under adversarial conditions."
+        }
+      ]
+    },
+    {
+      "id": "slide2",
+      "order": 2,
+      "type": "image",
+      "title": "Figure 1: Performance of Mahalanobis vs Softmax",
+      "subtitle": "ResNet Results",
+      "image_ref": "/uploads/figures/219dc4a8f5514c00b3c9d4c3b9262191_figure1.png",
+      "notes": "This figure demonstrates that Mahalanobis distance improves classification accuracy and OOD detection compared to Softmax.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Visualization (a)",
+          "content": "t-SNE plot shows clusters of features from different classes. Mahalanobis distance helps separate these clusters more distinctly than Softmax."
+        },
+        {
+          "number": 2,
+          "heading": "Accuracy (b)",
+          "content": "Bar chart shows Mahalanobis achieves higher test accuracy across CIFAR-10, CIFAR-100, and SVHN datasets."
+        },
+        {
+          "number": 3,
+          "heading": "ROC Curve (c)",
+          "content": "ROC curves indicate Mahalanobis has superior OOD detection capability, as shown by higher TPR at lower FPR compared to Softmax and Euclidean."
+        },
+        {
+          "number": 4,
+          "heading": "Overall Impact",
+          "content": "Mahalanobis distance enhances both in-distribution accuracy and OOD detection performance significantly over traditional methods."
+        }
+      ]
+    },
+    {
+      "id": "slide3",
+      "order": 3,
+      "type": "image",
+      "title": "Figure 2: AUC Comparison Across Datasets",
+      "subtitle": "DenseNet Confidence Scoring",
+      "image_ref": "/uploads/figures/219dc4a8f5514c00b3c9d4c3b9262191_figure2.png",
+      "notes": "Shows the effectiveness of the proposed confidence score across different datasets and attack types.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Dataset Performance",
+          "content": "AUROC scores are high across all datasets (TinyImageNet, LSUN, SVHN), indicating strong generalization of the Mahalanobis-based detector."
+        },
+        {
+          "number": 2,
+          "heading": "Adversarial Robustness",
+          "content": "Performance drops slightly on DeepFool samples but remains competitive, showing resilience against adversarial attacks."
+        },
+        {
+          "number": 3,
+          "heading": "Block-wise Analysis",
+          "content": "Scores vary by block index, suggesting some network layers are more reliable for confidence estimation."
+        },
+        {
+          "number": 4,
+          "heading": "Impact",
+          "content": "The method provides a solid baseline for confidence scoring, performing well even under challenging conditions."
+        }
+      ]
+    },
+    {
+      "id": "slide4",
+      "order": 4,
+      "type": "content",
+      "title": "Algorithmic Framework",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Describes the core algorithms for computing confidence scores and updating classifiers incrementally.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Algorithm 1: Confidence Score",
+          "content": "Computes a confidence score by aggregating Mahalanobis distances across network layers, incorporating noise perturbation for robustness."
+        },
+        {
+          "number": 2,
+          "heading": "Algorithm 2: Incremental Learning",
+          "content": "Updates class mean and shared covariance upon encountering new classes, enabling seamless integration into lifelong learning systems."
+        },
+        {
+          "number": 3,
+          "heading": "Key Design",
+          "content": "Uses Gaussian distributions to model feature variability per layer, making the score sensitive to distribution shifts."
+        },
+        {
+          "number": 4,
+          "heading": "Impact",
+          "content": "These algorithms provide a principled way to quantify uncertainty and adapt to new data without retraining the entire model."
+        }
+      ]
+    },
+    {
+      "id": "slide5",
+      "order": 5,
+      "type": "content",
+      "title": "Robustness and Generalization",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Highlights the method's robustness under noisy or imbalanced training data, and its ability to generalize from simple attacks to complex ones.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Hyperparameter Robustness",
+          "content": "Performance remains stable even when hyperparameters are tuned using only in-distribution data, without needing OOD validation samples."
+        },
+        {
+          "number": 2,
+          "heading": "Noise and Imbalance Resilience",
+          "content": "The method performs well even with noisy labels or small training datasets, outperforming baseline methods in extreme scenarios."
+        },
+        {
+          "number": 3,
+          "heading": "Generalization to Complex Attacks",
+          "content": "A model trained on a simple attack (e.g., FGSM) can effectively detect more complex attacks (e.g., DeepFool, CW), demonstrating strong transferability."
+        },
+        {
+          "number": 4,
+          "heading": "Cross-Task Performance",
+          "content": "The framework excels in detecting both OOD samples and adversarial attacks, achieving state-of-the-art performance in both domains."
+        }
+      ]
+    },
+    {
+      "id": "slide6",
+      "order": 6,
+      "type": "content",
+      "title": "Class-Incremental Learning Application",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Demonstrates how the method enables seamless addition of new classes without retraining, supporting lifelong learning.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Incremental Class Addition",
+          "content": "When new classes are introduced, the method updates class means and shared covariance, enabling detection of out-of-distribution samples without retraining."
+        },
+        {
+          "number": 2,
+          "heading": "Performance Comparison",
+          "content": "Outperforms baseline methods (e.g., Euclidean distance and retrained softmax) in maintaining base class accuracy while adding new classes."
+        },
+        {
+          "number": 3,
+          "heading": "Memory Efficiency",
+          "content": "Requires only a small number of old samples to maintain performance, reducing memory overhead in real-world deployment."
+        },
+        {
+          "number": 4,
+          "heading": "Practical Implications",
+          "content": "Enables efficient deployment in dynamic environments where new classes are added over time, such as in medical or security applications."
+        }
+      ]
+    },
+    {
+      "id": "slide7",
+      "order": 7,
+      "type": "content",
+      "title": "Conclusion and Future Work",
+      "subtitle": null,
+      "image_ref": null,
+      "notes": "Summarizes findings and suggests avenues for further research.",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Main Contributions",
+          "content": "Proposed a novel Mahalanobis-distance-based framework for robust classification and incremental learning."
+        },
+        {
+          "number": 2,
+          "heading": "Experimental Validation",
+          "content": "Results show consistent improvement over baseline methods across multiple benchmarks and attack scenarios."
+        },
+        {
+          "number": 3,
+          "heading": "Limitations",
+          "content": "Performance can degrade with very noisy or highly imbalanced data; requires careful hyperparameter tuning."
+        },
+        {
+          "number": 4,
+          "heading": "Future Directions",
+          "content": "Plan to extend to other architectures and integrate with more advanced uncertainty quantification techniques."
+        }
+      ]
+    },
+    {
+      "id": "slide8",
+      "order": 8,
+      "type": "content",
+      "title": "Thank You",
+      "subtitle": "Questions?",
+      "image_ref": null,
+      "notes": "",
+      "steps": [
+        {
+          "number": 1,
+          "heading": "Thank You",
+          "content": "Thank you for your attention!"
+        }
+      ]
+    }
+  ]
+}

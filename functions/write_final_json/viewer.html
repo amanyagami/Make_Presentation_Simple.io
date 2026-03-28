@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Deck Viewer</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0d0f14;
+  --surface: #151820;
+  --surface2: #1c1f2a;
+  --border: rgba(255,255,255,0.07);
+  --text: #e8eaf0;
+  --muted: #64748b;
+  --accent: #6382ff;
+  --accent2: #38bdf8;
+  --radius: 14px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top bar ───────────────────────────── */
+.top-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  gap: 12px;
+  z-index: 10;
+}
+
+.tb-brand { font-weight: 700; font-size: 0.9rem; letter-spacing: -0.01em; }
+.tb-counter {
+  font-family: 'DM Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.tb-actions { display: flex; gap: 8px; align-items: center; }
+
+.tb-btn {
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  white-space: nowrap;
+}
+.tb-btn:hover { border-color: rgba(99,130,255,0.35); }
+.tb-btn.primary {
+  background: linear-gradient(135deg, var(--accent), #4f6ef7);
+  border: none;
+  color: #fff;
+}
+
+/* ── Stage ─────────────────────────────── */
+.stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ── Slide ─────────────────────────────── */
+.slide {
+  display: none;
+  position: absolute;
+  width: min(900px, 92vw);
+  max-height: calc(100vh - 140px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  overflow: hidden;
+  flex-direction: column;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+}
+
+.slide.active {
+  display: flex;
+  animation: slideIn 350ms cubic-bezier(0.2,0.9,0.2,1) both;
+}
+
+.slide.exit {
+  animation: slideOut 250ms ease-in both;
+}
+
+@keyframes slideIn  {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes slideOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-14px) scale(0.97); }
+}
+
+/* ── Slide inner ───────────────────────── */
+.slide-inner {
+  flex: 1;
+  overflow-y: auto;
+  padding: 40px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+.slide-inner::-webkit-scrollbar { width: 4px; }
+.slide-inner::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+.slide-type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: rgba(99,130,255,0.1);
+  border: 1px solid rgba(99,130,255,0.2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  font-family: 'DM Mono', monospace;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 16px;
+}
+
+.slide-title {
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+  margin-bottom: 8px;
+}
+
+.slide-subtitle {
+  font-size: 1rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+
+/* ── Figure ────────────────────────────── */
+.slide-fig {
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 24px;
+  max-height: 280px;
+}
+.slide-fig img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ── Steps ─────────────────────────────── */
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  list-style: none;
+}
+
+.step-item {
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  opacity: 0;
+  transform: translateX(-12px);
+  transition: opacity .3s ease, transform .3s ease, border-color .2s;
+}
+
+.step-item.visible {
+  opacity: 1;
+  transform: translateX(0);
+  border-color: rgba(99,130,255,0.2);
+}
+
+.step-num {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--accent), #4f6ef7);
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 0.82rem;
+  font-family: 'DM Mono', monospace;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.step-content h3 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.step-content p {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.step-content a {
+  color: var(--accent2);
+  text-decoration: none;
+}
+
+.step-content a:hover { text-decoration: underline; }
+.step-content strong  { color: var(--text); font-weight: 600; }
+.step-content em      { color: var(--accent2); font-style: italic; }
+
+/* ── Notes ─────────────────────────────── */
+.slide-notes {
+  margin-top: 20px;
+  padding: 12px 14px;
+  background: rgba(99,130,255,0.04);
+  border: 1px solid rgba(99,130,255,0.12);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+/* ── Slide footer ──────────────────────── */
+.slide-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.slide-nav-btns { display: flex; gap: 8px; }
+
+.snav {
+  width: 36px; height: 36px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-size: 1rem;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: border-color .15s, background .15s;
+}
+.snav:hover { border-color: var(--accent); background: rgba(99,130,255,0.08); }
+.snav:disabled { opacity: 0.3; cursor: default; }
+
+.slide-prog-dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 400px;
+}
+
+.prog-dot {
+  width: 6px; height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  transition: width .3s ease, background .3s ease;
+  cursor: pointer;
+}
+.prog-dot.active {
+  width: 20px;
+  background: var(--accent);
+}
+
+/* ── Progress hint ─────────────────────── */
+.step-hint {
+  font-size: 0.78rem;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 5px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: 0.72rem;
+  background: var(--surface2);
+}
+
+/* ── Error / Loading states ─────────────── */
+.center-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--muted);
+  text-align: center;
+  height: 100%;
+}
+
+.spinner {
+  width: 28px; height: 28px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Fullscreen ────────────────────────── */
+.stage.fullscreen {
+  padding: 0;
+  background: #000;
+}
+
+.stage.fullscreen .slide {
+  width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  border: none;
+}
+
+@media (max-width: 600px) {
+  .stage { padding: 12px; }
+  .slide-inner { padding: 24px; }
+  .slide-title { font-size: 1.5rem; }
+  .step-hint { display: none; }
+}
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <div class="tb-brand">Deck Viewer</div>
+  <div class="tb-counter" id="counter">– / –</div>
+  <div class="tb-actions">
+    <div class="step-hint" id="kbHint">
+      <kbd>←</kbd><kbd>→</kbd> navigate &nbsp; <kbd>Space</kbd> next step
+    </div>
+    <button class="tb-btn" id="fullscreenBtn" title="Fullscreen">⛶</button>
+  </div>
+</div>
+
+<div class="stage" id="stage">
+  <div class="center-state" id="loadingState">
+    <div class="spinner"></div>
+    <div>Loading slides…</div>
+  </div>
+</div>
+
+<script>
+/* ── Utilities ─────────────────────────────────── */
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function md(text) {
+  if (!text) return '';
+  return esc(text)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\n/g, '<br>');
+}
+
+function safeSrc(src) {
+  if (!src) return null;
+  try {
+    const u = new URL(src, location.href);
+    return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : null;
+  } catch { return null; }
+}
+
+/* ── State ─────────────────────────────────────── */
+let allSlides   = [];   // DOM elements
+let slideIndex  = 0;
+let stepIndex   = -1;
+let currentSteps = [];
+
+/* ── Build slide DOM ───────────────────────────── */
+function buildSlide(data, idx) {
+  const el = document.createElement('div');
+  el.className = 'slide';
+  el.dataset.index = idx;
+
+  // Inner scroll area
+  const inner = document.createElement('div');
+  inner.className = 'slide-inner';
+
+  // Type tag
+  const tag = document.createElement('div');
+  tag.className = 'slide-type-tag';
+  tag.textContent = data.type || 'content';
+  inner.appendChild(tag);
+
+  // Title
+  const h1 = document.createElement('h1');
+  h1.className = 'slide-title';
+  h1.textContent = data.title || 'Untitled';
+  inner.appendChild(h1);
+
+  // Subtitle
+  if (data.subtitle) {
+    const sub = document.createElement('p');
+    sub.className = 'slide-subtitle';
+    sub.textContent = data.subtitle;
+    inner.appendChild(sub);
+  }
+
+  // Figure image
+  if (data.image_ref) {
+    const src = safeSrc(data.image_ref);
+    if (src) {
+      const fig = document.createElement('div');
+      fig.className = 'slide-fig';
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = data.title || 'Figure';
+      img.loading = 'lazy';
+      fig.appendChild(img);
+      inner.appendChild(fig);
+    }
+  }
+
+  // Steps
+  if (data.steps && data.steps.length) {
+    const ul = document.createElement('ul');
+    ul.className = 'steps-list';
+    data.steps.forEach(step => {
+      const li = document.createElement('li');
+      li.className = 'step-item';
+      li.innerHTML = `
+        <div class="step-num">${esc(String(step.number || ''))}</div>
+        <div class="step-content">
+          <h3>${esc(step.heading || '')}</h3>
+          <p>${md(step.content || '')}</p>
+        </div>`;
+      ul.appendChild(li);
+    });
+    inner.appendChild(ul);
+  } else if (data.notes) {
+    const empty = document.createElement('p');
+    empty.style.cssText = 'color:var(--muted);font-style:italic;margin-top:8px;';
+    empty.textContent = data.notes;
+    inner.appendChild(empty);
+  }
+
+  // Notes block (when steps also present)
+  if (data.notes && data.steps && data.steps.length) {
+    const notes = document.createElement('div');
+    notes.className = 'slide-notes';
+    notes.innerHTML = md(data.notes);
+    inner.appendChild(notes);
+  }
+
+  // Foot: nav + dots
+  const foot = document.createElement('div');
+  foot.className = 'slide-foot';
+
+  const navBtns = document.createElement('div');
+  navBtns.className = 'slide-nav-btns';
+  navBtns.innerHTML = `<button class="snav" id="prevBtn_${idx}">←</button><button class="snav" id="nextBtn_${idx}">→</button>`;
+
+  foot.appendChild(navBtns);
+  el.appendChild(inner);
+  el.appendChild(foot);
+  return el;
+}
+
+/* ── Navigation ────────────────────────────────── */
+function goTo(idx) {
+  const prev = allSlides[slideIndex];
+  if (prev && prev.classList.contains('active')) {
+    prev.classList.add('exit');
+    setTimeout(() => prev.classList.remove('active', 'exit'), 300);
+  }
+
+  slideIndex = Math.max(0, Math.min(idx, allSlides.length - 1));
+  const next = allSlides[slideIndex];
+  next.classList.add('active');
+
+  currentSteps = Array.from(next.querySelectorAll('.step-item'));
+  currentSteps.forEach(s => s.classList.remove('visible'));
+  stepIndex = -1;
+
+  updateCounter();
+  updateDots();
+  updateNavBtns();
+}
+
+function showNextStep() {
+  if (stepIndex < currentSteps.length - 1) {
+    stepIndex++;
+    currentSteps[stepIndex].classList.add('visible');
+  } else if (slideIndex < allSlides.length - 1) {
+    goTo(slideIndex + 1);
+  }
+}
+
+function showPrevStep() {
+  if (stepIndex >= 0) {
+    currentSteps[stepIndex].classList.remove('visible');
+    stepIndex--;
+  } else if (slideIndex > 0) {
+    goTo(slideIndex - 1);
+    // show all steps of prev slide
+    setTimeout(() => {
+      currentSteps.forEach(s => s.classList.add('visible'));
+      stepIndex = currentSteps.length - 1;
+    }, 50);
+  }
+}
+
+function updateCounter() {
+  document.getElementById('counter').textContent =
+    `${slideIndex + 1} / ${allSlides.length}`;
+}
+
+function updateDots() {
+  document.querySelectorAll('.prog-dot').forEach((dot, i) => {
+    dot.classList.toggle('active', i === slideIndex);
+  });
+}
+
+function updateNavBtns() {
+  // per-slide nav buttons
+  allSlides.forEach((slide, i) => {
+    const prev = slide.querySelector(`#prevBtn_${i}`);
+    const next = slide.querySelector(`#nextBtn_${i}`);
+    if (prev) prev.disabled = slideIndex === 0 && stepIndex < 0;
+    if (next) next.disabled = false;
+  });
+}
+
+/* ── Keyboard & click ──────────────────────────── */
+document.addEventListener('keydown', e => {
+  const tag = e.target.tagName.toLowerCase();
+  if (['input','textarea','select','button'].includes(tag)) return;
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault(); showNextStep();
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault(); showPrevStep();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault(); goTo(slideIndex - 1);
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault(); goTo(slideIndex + 1);
+  }
+});
+
+document.getElementById('stage').addEventListener('click', e => {
+  const tag = e.target.tagName.toLowerCase();
+  if (['a','button','input','select','kbd'].includes(tag)) return;
+  showNextStep();
+});
+
+/* ── Fullscreen ────────────────────────────────── */
+document.getElementById('fullscreenBtn').addEventListener('click', () => {
+  const stage = document.getElementById('stage');
+  if (!document.fullscreenElement) {
+    stage.requestFullscreen?.();
+    document.getElementById('fullscreenBtn').textContent = '✕';
+  } else {
+    document.exitFullscreen?.();
+    document.getElementById('fullscreenBtn').textContent = '⛶';
+  }
+});
+
+document.addEventListener('fullscreenchange', () => {
+  const stage = document.getElementById('stage');
+  stage.classList.toggle('fullscreen', !!document.fullscreenElement);
+  if (!document.fullscreenElement) {
+    document.getElementById('fullscreenBtn').textContent = '⛶';
+  }
+});
+
+/* ── Init ──────────────────────────────────────── */
+async function init() {
+  const stage = document.getElementById('stage');
+
+  try {
+    const r = await fetch('final.json', { cache: 'no-cache' });
+    if (!r.ok) throw new Error('Could not load final.json — HTTP ' + r.status);
+    const manifest = await r.json();
+
+    const rawSlides = manifest.slides || manifest;
+    if (!Array.isArray(rawSlides) || rawSlides.length === 0) {
+      throw new Error('No slides found in final.json');
+    }
+
+    // Sort by order field if present
+    const sorted = rawSlides.slice().sort((a, b) => {
+      const oa = Number(a.order), ob = Number(b.order);
+      if (!isFinite(oa) && !isFinite(ob)) return 0;
+      if (!isFinite(oa)) return 1;
+      if (!isFinite(ob)) return -1;
+      return oa - ob;
+    });
+
+    // Clear loading state
+    stage.innerHTML = '';
+
+    // Build slide deck container
+    const deck = document.createElement('div');
+    deck.style.cssText = 'position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+    // Build progress dots bar (above slides)
+    const dotsBar = document.createElement('div');
+    dotsBar.className = 'slide-prog-dots';
+    dotsBar.style.cssText = 'position:absolute;top:-24px;left:50%;transform:translateX(-50%);';
+
+    sorted.forEach((data, idx) => {
+      const slide = buildSlide(data, idx);
+      deck.appendChild(slide);
+      allSlides.push(slide);
+
+      // wire per-slide nav buttons
+      const prev = slide.querySelector(`#prevBtn_${idx}`);
+      const next = slide.querySelector(`#nextBtn_${idx}`);
+      if (prev) prev.addEventListener('click', e => { e.stopPropagation(); showPrevStep(); });
+      if (next) next.addEventListener('click', e => { e.stopPropagation(); showNextStep(); });
+
+      const dot = document.createElement('div');
+      dot.className = 'prog-dot';
+      dot.title = data.title || `Slide ${idx+1}`;
+      dot.addEventListener('click', e => { e.stopPropagation(); goTo(idx); });
+      dotsBar.appendChild(dot);
+    });
+
+    stage.appendChild(dotsBar);
+    stage.appendChild(deck);
+
+    goTo(0);
+  } catch(err) {
+    stage.innerHTML = `
+      <div class="center-state">
+        <div style="font-size:2rem;">⚠</div>
+        <div style="font-weight:600;color:var(--text)">Failed to load slides</div>
+        <div style="font-size:0.85rem;">${esc(err.message)}</div>
+        <button class="tb-btn" onclick="location.reload()">Retry</button>
+      </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

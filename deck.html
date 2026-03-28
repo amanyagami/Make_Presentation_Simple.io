@@ -11,16 +11,19 @@
 
 <style>
   :root{
-    --bg: #f7fbff;
-    --muted: #6b7280;
+    --bg: #f8fafd;
+    --muted: #64748b;
     --text: #0f172a;
     --accent: #2563eb;
     --accent-2: #06b6d4;
-    --card: #ffffff;
-    --border: #e6eefc;
-    --soft: #f3f8ff;
-    --radius: 12px;
-    --glass: rgba(255,255,255,0.6);
+    --card: rgba(255,255,255,0.85);
+    --border: rgba(148,163,184,0.15);
+    --soft: #f1f5f9;
+    --radius: 16px;
+    --glass: rgba(255,255,255,0.75);
+    --shadow-sm: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -4px rgba(0,0,0,0.05);
+    --shadow-md: 0 20px 25px -5px rgba(0,0,0,0.08), 0 8px 10px -6px rgba(0,0,0,0.08);
+    --accent-glow: 0 0 0 3px rgba(37,99,235,0.15);
   }
   *{box-sizing:border-box}
   html,body{height:100%;}
@@ -28,7 +31,7 @@
     margin:0;
     font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
     color:var(--text);
-    background:linear-gradient(180deg,var(--bg) 0%, #ffffff 100%);
+    background:linear-gradient(180deg,var(--bg) 0%, #f0f4ff 100%);
     -webkit-font-smoothing:antialiased;
     padding:28px;
   }
@@ -37,17 +40,23 @@
   header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
   .brand{display:flex;gap:12px;align-items:center}
   .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 8px 20px rgba(37,99,235,0.12)}
-  h1{font-size:1.05rem;margin:0;font-weight:600}
+  h1{font-size:1.35rem;margin:0;font-weight:600;letter-spacing:-0.02em}
   .muted{color:var(--muted);font-size:0.9rem}
 
-  .grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+  .grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:24px;
+    align-items:start;
+  }
 
   .card{
     background:var(--card);
     border-radius:var(--radius);
-    padding:18px;
+    padding:20px;
     border:1px solid var(--border);
-    box-shadow:0 10px 30px rgba(16,24,40,0.04);
+    box-shadow:var(--shadow-md);
+    backdrop-filter:blur(16px);
   }
 
   /* stepper / intro */
@@ -62,13 +71,13 @@
     align-items:center;
     background: linear-gradient(90deg, rgba(37,99,235,0.06), rgba(6,182,212,0.03));
     padding:10px;
-    border-radius:10px;
+    border-radius:12px;
     border:1px solid rgba(37,99,235,0.04);
   }
   .step {
     min-width:140px;
     padding:10px 12px;
-    border-radius:10px;
+    border-radius:12px;
     background:transparent;
     color:var(--muted);
     display:flex;
@@ -89,75 +98,144 @@
 
   /* upload column */
   .drop{
-    border:1px dashed var(--border);
-    border-radius:10px;
-    padding:16px;
+    border:2px dashed rgba(37,99,235,0.25);
+    border-radius:12px;
+    padding:20px;
     display:flex;
     flex-direction:column;
-    gap:12px;
+    gap:16px;
     align-items:stretch;
-    background:linear-gradient(180deg,#fff 0%, #fbfdff 100%);
+    background:var(--glass);
+    backdrop-filter:blur(12px);
     transition:box-shadow .15s ease, border-color .15s ease, transform .18s ease;
   }
-  .drop.dragover{border-color:var(--accent);box-shadow:0 12px 40px rgba(37,99,235,0.06)}
+  .drop.dragover{border-color:var(--accent);box-shadow:0 12px 40px rgba(37,99,235,0.12)}
   .controls{display:flex;gap:10px;flex-wrap:wrap}
   .btn{
-    padding:10px 14px;border-radius:10px;border:1px solid #e6eefc;background:white;font-weight:600;cursor:pointer;font-size:0.9rem;
+    padding:12px 20px;border-radius:12px;border:1px solid #e6eefc;background:white;font-weight:600;cursor:pointer;font-size:0.95rem;
+    transition:all .2s ease;
   }
-  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:none;box-shadow:0 8px 22px rgba(37,99,235,0.12)}
+  .btn.primary{background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:none;box-shadow:0 8px 25px -4px rgb(37 99 235 / 25%);}
+  .btn.primary:hover{transform:translateY(-1px);box-shadow:0 12px 30px -4px rgb(37 99 235 / 35%);}
   .btn.ghost{background:transparent;border:1px dashed #e6eefc;color:var(--muted)}
   .small{font-size:0.9rem;color:var(--muted)}
 
-  /* Updated: 2 pages per row, much larger */
-  .previews{display:grid;grid-template-columns:repeat(2, 1fr);gap:24px;margin-top:8px}
-  
-  .preview-card{border-radius:10px;border:1px solid #f1f7ff;padding:0;background:white;display:flex;flex-direction:column;gap:0;align-items:stretch;transition:transform .18s ease,box-shadow .18s ease;overflow:hidden}
-  .preview-card:hover{transform:translateY(-4px);box-shadow:0 12px 32px rgba(16,24,40,0.08)}
-  
-  /* Larger thumbnail with 4:5 aspect ratio */
-  .thumb{border-radius:0;overflow:hidden;background:var(--soft);display:block;aspect-ratio:3/4;position:relative;cursor:crosshair;min-height:420px}
-  .thumb canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;cursor:crosshair}
-  .thumb img{width:100%;height:100%;display:block;object-fit:cover;position:relative;z-index:1}
-  .page-label{padding:6px 8px;background:#f1f7ff;font-size:0.8rem;font-weight:600;color:var(--muted);text-align:center}
+  /* Empty state – makes landing page visually appealing */
+  .empty-state {
+    text-align:center;
+    padding:48px 20px 32px;
+    color:var(--muted);
+  }
+  .empty-state svg {
+    width:120px;
+    height:120px;
+    margin-bottom:20px;
+    filter:drop-shadow(0 10px 20px rgba(37,99,235,0.15));
+  }
+  .empty-state h3 {
+    font-size:1.4rem;
+    font-weight:600;
+    margin:0 0 8px;
+    color:var(--text);
+  }
+  .empty-state p {
+    font-size:1rem;
+    max-width:320px;
+    margin:0 auto;
+  }
 
-  /* right column - floating status sidebar - minimal compact design */
-  .status-sidebar{
-    position:fixed;
-    bottom:28px;
-    right:28px;
-    width:100px;
+  /* Updated: responsive previews */
+  .previews{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:28px;margin-top:8px}
+  
+  .preview-card{
+    border-radius:12px;
+    border:1px solid #f1f7ff;
+    padding:0;
+    background:white;
     display:flex;
     flex-direction:column;
     gap:0;
-    z-index:50;
-    transition: width 0.3s ease, opacity 0.3s ease;
-    opacity: 1;
+    align-items:stretch;
+    transition:transform .3s cubic-bezier(0.4,0,0.2,1), box-shadow .3s cubic-bezier(0.4,0,0.2,1);
+    overflow:hidden;
+    box-shadow:var(--shadow-sm);
+  }
+  .preview-card:hover{
+    transform:translateY(-8px) scale(1.01);
+    box-shadow:var(--shadow-md), var(--accent-glow);
+  }
+  
+  .thumb{
+    border-radius:12px;
+    overflow:hidden;
+    background:var(--soft);
+    display:block;
+    aspect-ratio:3/4;
+    position:relative;
+    cursor:crosshair;
+    min-height:380px;
+    box-shadow:inset 0 0 0 1px rgba(0,0,0,0.06);
+  }
+  .thumb canvas{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;cursor:crosshair}
+  .thumb img{width:100%;height:100%;display:block;object-fit:cover;position:relative;z-index:1}
+  .page-label{
+    padding:10px 12px;
+    background:linear-gradient(to right,#f1f5f9,#e0e7ff);
+    font-size:0.9rem;
+    font-weight:600;
+    color:var(--muted);
+    text-align:center;
   }
 
-  .status-sidebar.hidden {
-    opacity: 0;
-    pointer-events: none;
+  /* Right column - floating status sidebar → mobile bottom sheet */
+  .status-sidebar{
+    position:fixed;
+    bottom:0;
+    left:0;
+    right:0;
+    width:100%;
+    max-height:65vh;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    z-index:60;
+    background:transparent;
+    transform:translateY(100%);
+    transition:transform .4s cubic-bezier(0.32,0.72,0,1);
+    padding:0 12px 12px;
   }
 
   .status-sidebar.expanded {
-    width: 320px;
-    gap: 12px;
+    transform:translateY(0);
+  }
+
+  .status-sidebar::before {
+    content:'';
+    position:absolute;
+    top:-20px;
+    left:50%;
+    transform:translateX(-50%);
+    width:40px;
+    height:5px;
+    background:rgba(0,0,0,0.15);
+    border-radius:999px;
   }
 
   .status-card{
     background:var(--card);
     border-radius:var(--radius);
-    padding:14px;
+    padding:18px;
     border:1px solid var(--border);
-    box-shadow:0 10px 30px rgba(16,24,40,0.04);
-    transition: all 0.3s ease;
+    box-shadow:var(--shadow-md);
+    backdrop-filter:blur(16px);
+    transition:all .3s ease;
   }
 
   .status-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
   .spinner{width:36px;height:36px;border-radius:10px;background:linear-gradient(90deg,var(--accent),var(--accent-2));display:grid;place-items:center;color:white;font-weight:700;font-size:0.8rem;box-shadow:0 8px 22px rgba(37,99,235,0.12)}
   .status-line{display:flex;flex-direction:column}
-  .status-main{font-weight:600;font-size:0.95rem}
-  .status-sub{font-size:0.8rem;color:var(--muted)}
+  .status-main{font-weight:600;font-size:1.05rem}
+  .status-sub{font-size:0.875rem;color:var(--muted)}
 
   .progress-wrap{height:8px;background:var(--soft);border-radius:999px;overflow:hidden;margin:8px 0;position:relative}
   .progress-bar{
@@ -188,9 +266,9 @@
   .selection-group{border-bottom:1px solid #e6eefc;padding:0}
   .selection-group:last-child{border-bottom:none}
   
-  .group-header{  background: #f1f7ff;  padding: 6px 8px;  font-size: 0.8rem;  font-weight: 600;  color: var(--muted);  border-bottom: 1px solid #e6eefc;}
-  .selection-item{    display: flex;    gap: 8px;    align-items: flex-start;    padding: 8px;    border-bottom: 1px solid #f1f7ff;    font-size: 0.85rem;  }
-  .selection-item:last-child{ border-bottom: none; }
+  .group-header{background:#f1f7ff;padding:6px 8px;font-size:0.8rem;font-weight:600;color:var(--muted);border-bottom:1px solid #e6eefc;}
+  .selection-item{display:flex;gap:8px;align-items:flex-start;padding:8px;border-bottom:1px solid #f1f7ff;font-size:0.85rem}
+  .selection-item:last-child{border-bottom:none}
   
   .sel-number{min-width:24px;height:24px;border-radius:50%;background:var(--accent);color:white;display:grid;place-items:center;font-weight:700;font-size:0.7rem;flex-shrink:0;margin-top:1px}
   .sel-content{flex:1;min-width:0}
@@ -213,8 +291,8 @@
     position:fixed;
     background:white;
     border:1px solid var(--border);
-    border-radius:10px;
-    padding:12px;
+    border-radius:12px;
+    padding:16px;
     box-shadow:0 12px 40px rgba(0,0,0,0.15);
     z-index:70;
     min-width:220px;
@@ -222,15 +300,15 @@
   .sel-popup-title{font-weight:600;font-size:0.9rem;margin-bottom:8px}
   .sel-popup input, .sel-popup select{
     width:100%;
-    padding:6px 8px;
+    padding:8px 10px;
     margin-bottom:8px;
     border:1px solid #e6eefc;
-    border-radius:6px;
+    border-radius:8px;
     font-size:0.85rem;
     font-family:inherit;
   }
   .sel-popup-actions{display:flex;gap:8px}
-  .sel-popup-actions button{flex:1;padding:6px;border-radius:6px;border:1px solid #e6eefc;background:white;font-weight:600;font-size:0.85rem;cursor:pointer}
+  .sel-popup-actions button{flex:1;padding:8px;border-radius:8px;border:1px solid #e6eefc;background:white;font-weight:600;font-size:0.85rem;cursor:pointer}
   .sel-popup-actions .btn-save{background:var(--accent);color:white;border:none}
 
   .muted-small{color:var(--muted);font-size:0.85rem}
@@ -260,7 +338,7 @@
   .page-color-7 { --page-color: var(--color-page-7); }
   .page-color-8 { --page-color: var(--color-page-8); }
 
-  /* Processing overlay (fullscreen) */
+  /* Processing overlay – improved animation */
   .processing-overlay {
     position:fixed;
     inset:0;
@@ -279,7 +357,9 @@
     border-radius:18px;
     padding:28px;
     color:white;
-    box-shadow:0 20px 60px rgba(2,6,23,0.6);
+    box-shadow:0 30px 70px rgba(2,6,23,0.6);
+    border:1px solid rgba(255,255,255,0.2);
+    backdrop-filter:blur(20px);
     display:flex;
     gap:20px;
     align-items:center;
@@ -294,15 +374,22 @@
     position:absolute; inset:0; display:grid;place-items:center;
   }
   .orbit .ring {
-    width:60%; height:60%; border-radius:50%; border: 3px dashed rgba(255,255,255,0.08);
+    width:60%; height:60%; border-radius:50%; border: 3px dashed rgba(255,255,255,0.12);
     animation:spin 8s linear infinite;
     transform-origin:center;
   }
+  .orbit .ring2 {
+    width:78%; height:78%; border-radius:50%; border: 3px dashed rgba(255,255,255,0.08);
+    animation:spin 12s linear infinite reverse;
+    transform-origin:center;
+  }
   .orbit .core {
-    width:36px;height:36px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 8px 30px rgba(37,99,235,0.2);
+    width:42px;height:42px;border-radius:50%;background:linear-gradient(90deg,var(--accent),var(--accent-2));box-shadow:0 8px 30px rgba(37,99,235,0.2);
     display:grid;place-items:center;font-weight:700;color:white;
+    animation:corePulse 2s ease-in-out infinite;
   }
   @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  @keyframes corePulse{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
 
   .processing-info { flex:1; min-width:0;}
   .processing-title { font-size:1.15rem;font-weight:700;margin-bottom:6px }
@@ -315,29 +402,46 @@
   .controls-hidden { opacity:0; transform:translateY(6px); pointer-events:none; transition:opacity .35s, transform .35s; }
   .controls-visible { opacity:1; transform:none; pointer-events:auto; transition:opacity .35s, transform .35s; }
 
-  /* Responsive */
-  @media (max-width:1200px){
-    .previews{grid-template-columns:1fr}
-    .status-sidebar{width:280px}
+  /* Responsive improvements */
+  @media (max-width:640px){
+    body{padding:16px;}
+    .card{padding:16px;}
+    .drop{padding:16px;}
+    .thumb{min-height:340px;}
+    .previews{gap:20px;}
+    .skeleton-grid{gap:20px;}
+    .empty-state{padding:32px 16px;}
   }
 
-  @media (max-width:900px){
-    .status-sidebar{width:320px;bottom:20px;right:20px}
+  @media (min-width:1024px){
+    .grid{grid-template-columns:1fr 340px;gap:32px}
+    .status-sidebar{
+      position:fixed;
+      bottom:28px;
+      right:28px;
+      left:auto;
+      width:340px;
+      max-height:none;
+      transform:none;
+      padding:0;
+    }
+    .status-sidebar::before{display:none}
+    footer{margin-right:380px}
   }
 
-  /* ---------- New: skeleton preview loader & transitions ---------- */
+  /* skeleton preview loader */
   .skeleton-grid {
     display:grid;
-    grid-template-columns:repeat(2,1fr);
+    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
     gap:24px;
     margin-top:12px;
   }
   .skeleton-card {
     height:420px;
-    border-radius:10px;
+    border-radius:12px;
     overflow:hidden;
     background:linear-gradient(90deg,#f3f8ff 0%, #ffffff 50%, #f3f8ff 100%);
-    background-size: 800px 100%;
+    background-size:800px 100%;
     position:relative;
     box-shadow:0 8px 30px rgba(16,24,40,0.04);
     animation:shimmer 1.4s linear infinite;
@@ -365,32 +469,47 @@
     top:50%;
     transform:translate(-50%,-50%);
     z-index:130;
-    padding:16px 32px;
+    padding:18px 40px;
     border-radius:14px;
     font-weight:700;
-    font-size: 1rem;
+    font-size:1.1rem;
     background:linear-gradient(90deg,var(--accent),var(--accent-2));
     color:white;
     border:none;
-    box-shadow:0 20px 60px rgba(37,99,235,0.18);
-    cursor: pointer;
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.9);
-    pointer-events: none;
-    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.2, 0.9, 0.2, 1);
+    box-shadow:0 25px 50px -12px rgb(37 99 235 / 40%);
+    cursor:pointer;
+    opacity:0;
+    transform:translate(-50%,-50%) scale(0.9);
+    pointer-events:none;
+    transition:opacity .4s ease, transform .4s cubic-bezier(0.2,0.9,0.2,1);
   }
 
   #viewSlidesBtn.show {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-    pointer-events: auto;
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1);
+    pointer-events:auto;
   }
 
-  /* small transitions for preview area and sidebar */
+  #viewSlidesBtn:hover {
+    transform:translate(-50%,-50%) scale(1.05);
+  }
+
   #previews, .status-sidebar, .status-card, .card { transition:opacity .36s ease, transform .36s ease; }
 
-  @media (max-width:1200px) {
-    .skeleton-grid { grid-template-columns:1fr; }
+  /* Toggle button for mobile */
+  #toggleSidebarBtn {
+    display:none;
+    padding:10px 16px;
+    border-radius:12px;
+    font-weight:600;
+    font-size:0.95rem;
+    background:white;
+    border:1px solid var(--border);
+    box-shadow:var(--shadow-sm);
+  }
+
+  @media (max-width:1023px) {
+    #toggleSidebarBtn { display:block; }
   }
 </style>
 </head>
@@ -404,6 +523,9 @@
           <div class="muted">Upload PDF → mark figures → generate slides</div>
         </div>
       </div>
+      
+      <button id="toggleSidebarBtn" class="btn">Selections &amp; Status</button>
+      
       <div class="muted">Clean • Fast • Focused</div>
     </header>
 
@@ -447,7 +569,22 @@
         </div>
 
         <div id="dropZone" class="drop" aria-describedby="uploadHint">
-          <div id="uploadHint" class="small">Drag & drop or choose a PDF to begin.</div>
+          
+          <!-- NEW: Beautiful landing / empty state -->
+          <div id="emptyState" class="empty-state">
+            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M14 2H6C4.89543 2 4 2.89543 4 4V20C4 21.1046 4.89543 22 6 22H18C19.1046 22 20 21.1046 20 20V8L14 2Z" stroke="#2563eb" stroke-width="1.8" stroke-linejoin="round"/>
+              <path d="M14 2V8H20" stroke="#2563eb" stroke-width="1.8" stroke-linejoin="round"/>
+              <rect x="8" y="10" width="8" height="2" rx="0.5" fill="#06b6d4"/>
+              <rect x="8" y="14" width="5" height="2" rx="0.5" fill="#06b6d4"/>
+              <path d="M19 17L21 19" stroke="#2563eb" stroke-width="1.5" stroke-linecap="round"/>
+              <circle cx="19" cy="17" r="1.5" fill="#06b6d4"/>
+            </svg>
+            <h3>Build beautiful slides from your PDF</h3>
+            <p>Upload a document, highlight key figures &amp; tables, and get a clean presentation in seconds.</p>
+          </div>
+
+          <div id="uploadHint" class="small">Drag &amp; drop or choose a PDF to begin.</div>
 
           <div class="controls" role="group" aria-label="upload controls">
             <button id="uploadBtn" class="btn primary controls-visible">Upload</button>
@@ -456,7 +593,7 @@
 
           <div id="statusBox" class="small" style="margin-top:6px">No file selected</div>
 
-          <!-- Thumbnail grid - 2 columns, larger pages -->
+          <!-- Thumbnail grid -->
           <div id="skeletonPreviews" class="skeleton-grid" style="display:none" aria-hidden="true">
             <div class="skeleton-card"><div class="skeleton-title"></div></div>
             <div class="skeleton-card"><div class="skeleton-title"></div></div>
@@ -468,9 +605,10 @@
         </div>
       </section>
 
-      <!-- Right Sidebar: Status & Selections (Floating) -->
+      <!-- Sidebar: Status (always visible) + Selections (only when previews exist) -->
       <aside class="status-sidebar" id="statusSidebar">
-        <!-- Status Card -->
+        
+        <!-- Status Card – always shown -->
         <div class="status-card" aria-labelledby="statusTitle">
           <div id="statusTitle" style="font-weight:600;font-size:0.95rem;margin-bottom:10px">Status</div>
 
@@ -482,7 +620,6 @@
             </div>
           </div>
 
-          <!-- Linear progress (shared for upload/process) -->
           <div class="progress-wrap" aria-hidden="false">
             <div id="progressBar" class="progress-bar" style="width:0%"></div>
           </div>
@@ -492,8 +629,8 @@
           </div>
         </div>
 
-        <!-- Selections Card -->
-        <div class="status-card">
+        <!-- Selections Card – hidden until previews are rendered -->
+        <div id="selectionsCard" class="status-card" style="display:none">
           <div class="selections-title">Selections</div>
           <div class="selections" id="selections"></div>
 
@@ -507,7 +644,7 @@
           </div>
 
           <div class="muted-small" style="margin-top:10px">
-            Click on pages to draw boxes. Fill in type & label.
+            Click on pages to draw boxes. Fill in type &amp; label.
           </div>
         </div>
       </aside>
@@ -537,6 +674,7 @@
       <div class="processing-visual" aria-hidden="true">
         <div class="orbit" aria-hidden="true">
           <div class="ring"></div>
+          <div class="ring ring2"></div>
           <div class="core">DB</div>
         </div>
       </div>
@@ -560,7 +698,6 @@
 
 <script>
 /* Element refs */
-const fileInput = document.getElementById('fileInput');
 const uploadBtn = document.getElementById('uploadBtn');
 const clearBtn = document.getElementById('clearBtn');
 const processBtn = document.getElementById('processBtn');
@@ -577,6 +714,7 @@ const statusSub = document.getElementById('statusSub');
 const statusIcon = document.getElementById('statusIcon');
 const workingIndicator = document.getElementById('workingIndicator');
 const statusSidebar = document.getElementById('statusSidebar');
+const selectionsCard = document.getElementById('selectionsCard');   /* NEW */
 
 const selPopup = document.getElementById('selPopup');
 const selType = document.getElementById('selType');
@@ -592,14 +730,15 @@ const procClose = document.getElementById('procClose');
 
 const viewSlidesBtn = document.getElementById('viewSlidesBtn');
 const mainWrap = document.getElementById('mainWrap');
-
 const skeletonPreviews = document.getElementById('skeletonPreviews');
+const emptyState = document.getElementById('emptyState');           /* NEW */
+const toggleSidebarBtn = document.getElementById('toggleSidebarBtn');
 
 /* State */
 let chosenFile = null;
 let currentUpload = null;
-let previews = []; // {page, path, filename, imgEl, canvasEl}
-let selections = []; // {page, x, y, w, h, type}
+let previews = [];
+let selections = [];
 let pollInterval = null;
 let isProcessing = false;
 
@@ -611,7 +750,7 @@ let pendingRect = null;
 const pageColors = ['#ec4899','#f97316','#eab308','#22c55e','#06b6d4','#3b82f6','#8b5cf6','#d946ef'];
 function getPageColor(pageNum){ return pageColors[(pageNum-1) % pageColors.length]; }
 
-/* Intro step animation: highlight steps then reveal controls */
+/* Intro step animation */
 (function runIntro() {
   const steps = Array.from(document.querySelectorAll('.step'));
   let idx = 0;
@@ -626,13 +765,12 @@ function getPageColor(pageNum){ return pageColors[(pageNum-1) % pageColors.lengt
 })();
 
 function revealControls(){
-  // Only upload button is visible initially
   uploadBtn.classList.remove('controls-hidden');
   uploadBtn.classList.add('controls-visible');
   uploadBtn.disabled = false;
 }
 
-/* ---------- Minimal safe helper functions (no validation) ---------- */
+/* Safe helpers */
 function safeUrl(base, id) {
   return `${base}/${encodeURIComponent(String(id))}`;
 }
@@ -640,44 +778,34 @@ async function fetchJSONSafe(input, init = {}) {
   const res = await fetch(input, init);
   const txt = await res.text();
   let data = null;
-  try { data = txt ? JSON.parse(txt) : null; } catch (e) { /* allow non-json */ }
-  if (!res.ok) {
-    const msg = (data && data.message) ? data.message : `Server returned ${res.status}`;
-    throw new Error(msg);
-  }
+  try { data = txt ? JSON.parse(txt) : null; } catch (e) {}
+  if (!res.ok) throw new Error((data && data.message) || `Server returned ${res.status}`);
   return data;
 }
 
-/* --- File selection & drag/drop (no validation) --- */
-uploadBtn.addEventListener('click', () => {
-  if (!chosenFile) {
-    fileInput.click();
-    return;
-  }
-  doUpload();
-});
-
+/* File handling */
 const fileInputElement = document.createElement('input');
 fileInputElement.type = 'file';
 fileInputElement.accept = 'application/pdf';
 fileInputElement.style.display = 'none';
 fileInputElement.addEventListener('change', (e) => {
-  const f = e.target.files && e.target.files[0];
+  const f = e.target.files?.[0];
   if (f) {
     chosenFile = f;
     uploadBtn.textContent = 'Start upload';
     statusBox.textContent = `Selected: ${f.name}`;
     setStatus('Ready to upload', f.name);
     uploadBtn.disabled = false;
+    emptyState.style.display = 'none';          /* hide landing state */
   }
 });
 document.body.appendChild(fileInputElement);
 
 dropZone.addEventListener('dragover', (e)=>{ e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', ()=> dropZone.classList.remove('dragover'));
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
 dropZone.addEventListener('drop', (e)=> {
   e.preventDefault(); dropZone.classList.remove('dragover');
-  const f = (e.dataTransfer.files && e.dataTransfer.files[0]);
+  const f = e.dataTransfer.files?.[0];
   if (f) {
     chosenFile = f;
     fileInputElement.files = e.dataTransfer.files;
@@ -685,8 +813,7 @@ dropZone.addEventListener('drop', (e)=> {
     statusBox.textContent = `Selected: ${f.name}`;
     setStatus('Ready to upload', f.name);
     uploadBtn.disabled = false;
-  } else {
-    setStatus('Please drop a file', '');
+    emptyState.style.display = 'none';
   }
 });
 
@@ -714,21 +841,25 @@ function resetAll(){
   manifestArea.style.display = 'none';
   previewsEl.style.display = 'none';
   skeletonPreviews.style.display = 'none';
+  emptyState.style.display = 'flex';                    /* restore landing state */
   updateProgress(0);
   setStatus('Cleared', 'Awaiting file');
   statusBox.textContent = 'No file selected';
   stopPolling();
   hideProcessingOverlay();
   viewSlidesBtn.classList.remove('show');
-  statusSidebar.classList.remove('hidden');
+  statusSidebar.classList.remove('expanded');
+  selectionsCard.style.display = 'none';                /* hide selections */
   mainWrap.classList.remove('minimal-hidden');
   mainWrap.classList.add('minimal-visible');
 }
 
+/* Upload */
 function doUpload() {
   if (!chosenFile) return;
   uploadBtn.disabled = true;
   setStatus('Uploading…', chosenFile.name);
+  emptyState.style.display = 'none';
 
   const xhr = new XMLHttpRequest();
   const fd = new FormData();
@@ -753,14 +884,10 @@ function doUpload() {
       setStatus('Upload complete', 'Rendering previews');
       updateProgress(0);
 
-      // Hide upload button and controls
       document.querySelector('.controls').style.display = 'none';
-
-      // show skeleton while previews appear
       skeletonPreviews.style.display = 'grid';
       previewsEl.style.display = 'none';
 
-      // if server returned previews, hand off; otherwise wait for status poll to provide them
       if (data.previews && data.previews.length) {
         setTimeout(() => {
           skeletonPreviews.style.display = 'none';
@@ -771,9 +898,9 @@ function doUpload() {
           processBtn.textContent = 'Done';
           processBtn.disabled = true;
           statusSidebar.classList.add('expanded');
+          selectionsCard.style.display = 'block';        /* SHOW selections only now */
         }, 600);
       } else {
-        // wait a short time and poll /status once for previews
         setTimeout(fetchStatusOnce, 700);
       }
 
@@ -783,11 +910,10 @@ function doUpload() {
       uploadBtn.disabled = false;
     }
   };
-  xhr.onerror = function(){ setStatus('Upload failed', 'Network error'); uploadBtn.disabled = false; };
+  xhr.onerror = () => { setStatus('Upload failed', 'Network error'); uploadBtn.disabled = false; };
   xhr.send(fd);
 }
 
-/* Fetch one-off status to see if previews are ready (if server produces them async) */
 async function fetchStatusOnce() {
   if (!currentUpload || !currentUpload.upload_id) return;
   try {
@@ -806,12 +932,13 @@ async function fetchStatusOnce() {
       processBtn.textContent = 'Done';
       processBtn.disabled = true;
       statusSidebar.classList.add('expanded');
+      selectionsCard.style.display = 'block';           /* SHOW selections */
     }
     if (obj.manifest_url) showManifest(obj.manifest_url);
   } catch (e) { console.warn('status fetch failed', e); }
 }
 
-/* --- Thumbnails & drawing setup --- */
+/* Thumbnails & drawing (unchanged) */
 function renderThumbnails(list){
   previews = [];
   previewsEl.innerHTML = '';
@@ -854,9 +981,7 @@ function renderThumbnails(list){
     if (previewEntry) previewEntry.canvasEl = canvas;
   });
 
-  if (previews.length > 0) {
-    previewsEl.style.display = 'grid';
-  }
+  if (previews.length > 0) previewsEl.style.display = 'grid';
 }
 
 function setupThumbnailDrawing(canvas, imgEl, page){
@@ -934,7 +1059,7 @@ function redrawCanvas(canvas, imgEl, page){
   ctx.clearRect(0,0,canvas.width,canvas.height);
   const pageColor = getPageColor(page);
   const boxes = selections.filter(s => s.page === page);
-  boxes.forEach((box, idx) => {
+  boxes.forEach(box => {
     const num = (selections.indexOf(box) + 1);
     drawBox(ctx, box.x, box.y, box.w, box.h, pageColor, num);
   });
@@ -961,7 +1086,7 @@ function drawBox(ctx, x, y, w, h, color, num = '', isDraft = false){
   ctx.fillText(String(num), x + 6, y + fontSize + 2);
 }
 
-/* Selection popup */
+/* Popup & selections */
 function showSelectionPopup(imgEl) {
   selType.value = 'figure';
   const rect = imgEl.getBoundingClientRect();
@@ -973,14 +1098,7 @@ function showSelectionPopup(imgEl) {
 popupSaveBtn.addEventListener('click', () => {
   if (!pendingRect) return;
   const type = selType.value || 'figure';
-  selections.push({
-    page: pendingRect.page,
-    x: pendingRect.x,
-    y: pendingRect.y,
-    w: pendingRect.w,
-    h: pendingRect.h,
-    type: type
-  });
+  selections.push({ page: pendingRect.page, x: pendingRect.x, y: pendingRect.y, w: pendingRect.w, h: pendingRect.h, type });
   pendingRect = null;
   selPopup.style.display = 'none';
   renderSelections();
@@ -989,7 +1107,6 @@ popupSaveBtn.addEventListener('click', () => {
 popupCancelBtn.addEventListener('click', () => { pendingRect = null; selPopup.style.display = 'none'; });
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && selPopup.style.display !== 'none') popupCancelBtn.click(); });
 
-/* Selections panel */
 function renderSelections(){
   selectionsEl.innerHTML = '';
   if (selections.length === 0) {
@@ -1011,8 +1128,8 @@ function renderSelections(){
       const itemEl = document.createElement('div'); itemEl.className='selection-item';
       const num = document.createElement('div'); num.className='sel-number'; num.style.background=getPageColor(page); num.textContent = boxNum;
       const content = document.createElement('div'); content.className='sel-content';
-      const type = document.createElement('div'); type.className='sel-type'; type.textContent = item.type.charAt(0).toUpperCase() + item.type.slice(1);
-      content.appendChild(type);
+      const typeEl = document.createElement('div'); typeEl.className='sel-type'; typeEl.textContent = item.type.charAt(0).toUpperCase() + item.type.slice(1);
+      content.appendChild(typeEl);
       const rm = document.createElement('button'); rm.className='sel-remove'; rm.textContent='Remove';
       rm.addEventListener('click', () => {
         selections.splice(item.globalIdx, 1);
@@ -1028,27 +1145,22 @@ function renderSelections(){
   processBtn.disabled = !(selections.length > 0);
 }
 
-/* Compact sidebar toggle */
-statusSidebar.addEventListener('click', (e) => {
-  if (!e.target.closest('button')) statusSidebar.classList.toggle('expanded');
-});
+/* Mobile toggle */
+toggleSidebarBtn.addEventListener('click', () => statusSidebar.classList.toggle('expanded'));
 
-/* Processing: send selections, show overlay, poll progress */
+/* Processing */
 processBtn.addEventListener('click', async () => {
-  // Require only that the upload exists and we have an upload_id.
   if (!currentUpload || !currentUpload.upload_id) {
     alert('Ensure a file is uploaded first.');
     return;
   }
 
-  // UI: hide main UI and sidebar
   mainWrap.classList.remove('minimal-visible');
   mainWrap.classList.add('minimal-hidden');
   statusSidebar.classList.add('hidden');
 
   showProcessingOverlay();
 
-  // Build payload — fall back to chosenFile.name if pdf_filename is missing
   const payload = {
     pdf_filename: currentUpload.pdf_filename || (chosenFile && chosenFile.name) || null,
     selections: selections,
@@ -1080,7 +1192,6 @@ processBtn.addEventListener('click', async () => {
   }
 });
 
-/* Processing overlay controls */
 function showProcessingOverlay(){
   processingOverlay.style.display = 'flex';
   processingOverlay.setAttribute('aria-hidden','false');
@@ -1093,7 +1204,6 @@ function hideProcessingOverlay(){
   processingOverlay.setAttribute('aria-hidden','true');
 }
 
-/* Cancel processing */
 procClose.addEventListener('click', () => {
   stopPolling();
   workingIndicator.style.display = 'none';
@@ -1107,17 +1217,14 @@ procClose.addEventListener('click', () => {
   viewSlidesBtn.classList.remove('show');
 });
 
-/* Polling for status */
+/* Polling */
 function startPolling(upload_id){
   stopPolling();
   const tick = async () => {
     try {
       const url = safeUrl('/status', upload_id);
       const res = await fetch(url);
-      if (!res.ok) {
-        console.warn('status fetch failed', res.status);
-        return;
-      }
+      if (!res.ok) return;
       const data = await res.json();
       if (data.progress !== undefined) {
         updateProgress(data.progress);
@@ -1139,7 +1246,6 @@ function startPolling(upload_id){
           procSub.textContent = 'Slides ready to view';
           setTimeout(() => {
             hideProcessingOverlay();
-            // Show centered view slides button
             viewSlidesBtn.classList.add('show');
             viewSlidesBtn.onclick = () => { window.open('/index.html','_blank'); };
           }, 800);
@@ -1155,9 +1261,7 @@ function startPolling(upload_id){
           }, 1400);
         }
       }
-    } catch (e) {
-      console.warn('poll error', e);
-    }
+    } catch (e) { console.warn('poll error', e); }
   };
   tick();
   pollInterval = setInterval(tick, 2500);
@@ -1168,7 +1272,6 @@ function stopPolling(){
   pollInterval = null;
 }
 
-/* Helpers: progress, status, manifest */
 function updateProgress(pct){
   const clamped = Math.max(0, Math.min(100, Number(pct) || 0));
   progressBar.style.width = clamped + '%';
@@ -1184,11 +1287,11 @@ function showManifest(url){
   manifestLink.textContent = 'Open slides →';
 }
 
-/* Probe backend on load */
+/* Probe backend */
 (async function probe(){
   try {
     const r = await fetch('/');
-    if (r.ok) { setStatus('Ready','Select a PDF to begin'); }
+    if (r.ok) setStatus('Ready','Select a PDF to begin');
     else { setStatus('Backend unreachable','Server returned '+r.status); uploadBtn.disabled=true; }
   } catch(e) { setStatus('Backend not reachable','Ensure server is running at /'); uploadBtn.disabled=true; }
 })();
