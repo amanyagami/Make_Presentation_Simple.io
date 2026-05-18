@@ -1336,7 +1336,11 @@ input[type="file"] { display: none; }
       ob.style.display = 'none';
       document.getElementById('appShell').classList.add('visible');
       initBackground();
-      prepareUploadSlot();
+      setStatus('idle', 'Ready', 'Choose a PDF file to upload');
+      // Prepare upload slot on startup
+      prepareUploadSlot('document.pdf').catch(e => {
+        setStatus('error', 'Failed to initialize', 'Please refresh the page');
+      });
     }, 700);
   }
 
@@ -1459,8 +1463,93 @@ document.getElementById('themeToggle').addEventListener('click', function() {
 /* ═══════════════════════════════════════════
    CONFIG
 ═══════════════════════════════════════════ */
-const API_BASE = "https://li821zmmw4.execute-api.us-east-1.amazonaws.com/Prod";
+
+// Allow API endpoint override via ?api=... in URL or window.API_BASE
+function getApiBase() {
+  const urlParam = new URLSearchParams(window.location.search).get('api');
+  if (urlParam) return urlParam;
+  if (window.API_BASE) return window.API_BASE;
+  return "https://9l4b3273sc.execute-api.us-east-1.amazonaws.com/Prod";
+}
+const API_BASE = getApiBase();
 function url(path) { return API_BASE.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path); }
+
+// Error display utility (now shows endpoint and details)
+function showError(message, detail, endpoint) {
+  let errDiv = document.getElementById('globalError');
+  if (!errDiv) {
+    errDiv = document.createElement('div');
+    errDiv.id = 'globalError';
+    errDiv.style.position = 'fixed';
+    errDiv.style.top = '24px';
+    errDiv.style.left = '50%';
+    errDiv.style.transform = 'translateX(-50%)';
+    errDiv.style.background = '#f87171';
+    errDiv.style.color = '#fff';
+    errDiv.style.padding = '16px 32px';
+    errDiv.style.borderRadius = '12px';
+    errDiv.style.zIndex = '9999';
+    errDiv.style.fontFamily = 'Syne, sans-serif';
+    errDiv.style.fontWeight = '700';
+    errDiv.style.boxShadow = '0 4px 24px rgba(0,0,0,0.18)';
+    errDiv.style.maxWidth = '90vw';
+    errDiv.style.textAlign = 'center';
+    document.body.appendChild(errDiv);
+  }
+  let html = `<div>${message}</div>`;
+  if (endpoint) html += `<div style='font-size:0.85em;font-weight:400;margin-top:4px;'>Endpoint: <span style='font-family:monospace;'>${endpoint}</span></div>`;
+  if (detail) html += `<div style='font-size:0.9em;font-weight:400;margin-top:4px;'>${detail}</div>`;
+  errDiv.innerHTML = html;
+  errDiv.style.display = 'block';
+  setTimeout(() => { errDiv.style.display = 'none'; }, 12000);
+}
+
+async function postJson(path, payload) {
+  // Keep cross-origin requests "simple" by not forcing application/json.
+  // Some deployed API Gateway stages in this project do not answer OPTIONS
+  // preflight on every route, which makes fetch fail before Lambda runs.
+  let r, text, data = null;
+  const endpoint = url(path);
+  try {
+    r = await fetch(endpoint, {
+      method: 'POST',
+      body: JSON.stringify(payload || {})
+    });
+    text = await r.text();
+    if (text) {
+      try { data = JSON.parse(text); } catch { data = { message: text }; }
+    }
+    if (!r.ok) {
+      const detail = data?.message || data?.error || text || `Server error ${r.status}`;
+      showError('API Error', detail, endpoint);
+      const err = new Error(detail);
+      err.status = r.status;
+      throw err;
+    }
+    return data || {};
+  } catch (e) {
+    showError('Network/API Error', e.message || e.toString(), endpoint);
+    throw e;
+  }
+}
+
+async function startPreprocessing() {
+  const payload = { upload_id: uploadId, pdf_key: pdfKey };
+  try {
+    return await postJson('/preprocess/' + encodeURIComponent(uploadId), payload);
+  } catch (firstError) {
+    // Older deployments used /process without selections to start preprocessing.
+    // Try that route so the frontend works against both backend versions.
+    try {
+      return await postJson('/process/' + encodeURIComponent(uploadId), payload);
+    } catch (secondError) {
+      if (firstError instanceof TypeError || [403, 404, 405].includes(firstError.status)) {
+        throw secondError;
+      }
+      throw firstError;
+    }
+  }
+}
 
 /* ── STATE ── */
 let uploadId = null, pdfKey = null, uploadUrl = null;
@@ -1672,51 +1761,21 @@ function showDoneState() {
 /* ═══════════════════════════════════════════
    UPLOAD FLOW (unchanged logic)
 ═══════════════════════════════════════════ */
-async function prepareUploadSlot() {
-  if (uploadPrepPromise) return uploadPrepPromise;
-  setUploadReady(false);
-  uploadProgress.style.display = 'block';
-  upLabel.textContent = 'Preparing upload link...';
-  upPct.textContent = '0%';
-  upBar.style.width = '0%';
-  setStatus('running','Preparing upload link...','Connecting to upload service');
-  setProgress(3);
-  let stagedPct = 0;
-  clearPrepTicker();
-  prepTicker = setInterval(() => {
-    stagedPct = Math.min(90, stagedPct + (stagedPct < 60 ? 8 : 3));
-    upBar.style.width = stagedPct + '%';
-    upPct.textContent = stagedPct + '%';
-    setProgress(Math.min(14, 3 + stagedPct * 0.12));
-  }, 220);
-
-  uploadPrepPromise = (async () => {
-    try {
-      const r = await fetch(url('/upload'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ filename: 'upload.pdf', content_type: 'application/pdf' })
-      });
-      if (!r.ok) throw new Error('Server error ' + r.status);
-      const initData = await r.json();
-      uploadId = initData.upload_id; pdfKey = initData.pdf_key; uploadUrl = initData.upload_url;
-      clearPrepTicker();
-      upBar.style.width = '100%'; upPct.textContent = '100%'; upLabel.textContent = 'Upload link ready';
-      setProgress(15); setStatus('','Upload link ready','Choose a PDF to begin');
-      setUploadReady(true);
-      setTimeout(() => { if (uploadReady && !isProcessing) uploadProgress.style.display = 'none'; }, 700);
-      return initData;
-    } catch(e) {
-      clearPrepTicker();
-      uploadId = null; pdfKey = null; uploadUrl = null;
-      setUploadReady(false);
-      uploadProgress.style.display = 'block';
-      upLabel.textContent = 'Upload link failed'; upPct.textContent = '0%'; upBar.style.width = '0%';
-      setStatus('error','Could not prepare upload link', e.message);
-      throw e;
-    } finally { uploadPrepPromise = null; }
-  })();
-  return uploadPrepPromise;
+async function prepareUploadSlot(filename) {
+  if (!filename) {
+    showError('Upload Error', 'Filename is required to prepare upload slot.');
+    return;
+  }
+  try {
+    const response = await postJson('/upload', { filename });
+    uploadUrl = response.upload_url;
+    uploadId = response.upload_id;
+    pdfKey = response.pdf_key;
+    setUploadReady(true);
+  } catch (error) {
+    setUploadReady(false);
+    throw error;
+  }
 }
 
 dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
@@ -1727,10 +1786,19 @@ dropZone.addEventListener('drop', e => {
   if (f && (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'))) startUpload(f);
 });
 chooseBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', e => { const f = e.target.files?.[0]; if (f) startUpload(f); e.target.value = ''; });
+fileInput.addEventListener('change', e => { 
+  const f = e.target.files?.[0]; 
+  if (f) {
+    // Prepare upload slot with actual filename then start immediately
+    prepareUploadSlot(f.name).then(() => startUpload(f)).catch(e => {
+      setStatus('error', 'Failed to prepare upload', e.message);
+    });
+  }
+  e.target.value = ''; 
+});
 
 async function startUpload(file) {
-  if (!uploadReady) { try { await prepareUploadSlot(); } catch { return; } }
+  if (!uploadReady) { try { await prepareUploadSlot(file.name); } catch { return; } }
   if (!uploadUrl || !uploadId || !pdfKey) { setStatus('error','Upload not ready','Please reload the page'); return; }
   uploadReady = false;
   chooseBtn.disabled = true; chooseBtn.classList.remove('ready-glow'); chooseBtn.textContent = 'Uploading...';
@@ -1766,12 +1834,13 @@ async function uploadDone() {
   setStatus('running','Upload complete','Triggering preprocessing…'); setProgress(25);
   uploadProgress.style.display = 'none';
   try {
-    const r = await fetch(url('/process/' + encodeURIComponent(uploadId)), {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ upload_id: uploadId, pdf_key: pdfKey })
-    });
-    if (!r.ok) throw new Error('Server error ' + r.status);
-  } catch(e) { setStatus('error','Failed to start preprocessing', e.message); return; }
+    await startPreprocessing();
+  } catch(e) {
+    setStatus('error','Failed to start preprocessing', e.message || 'Unable to reach API');
+    chooseBtn.disabled = false;
+    chooseBtn.textContent = 'Choose PDF to Upload';
+    return;
+  }
   cardTitle.textContent = 'Processing your PDF…'; cardSub.textContent = 'Rendering page previews';
   clearBtn.style.display = 'block'; skeletonGrid.style.display = 'grid'; dropZone.style.display = 'none';
   setStep(2); pollForPreviews();
@@ -1943,15 +2012,30 @@ processBtn.addEventListener('click', async () => {
   isProcessing=true;
   startPipelineAnimation();
 
+  const processPath = '/process/' + encodeURIComponent(uploadId);
+  const processPayload = {
+    upload_id: uploadId,
+    pdf_key: pdfKey,
+    selections: selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type}))
+  };
   try {
-    const r = await fetch(url('/process/'+encodeURIComponent(uploadId)), {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ upload_id:uploadId, pdf_key:pdfKey, selections:selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type})) })
+    await postJson('/process/'+encodeURIComponent(uploadId), {
+      upload_id: uploadId,
+      pdf_key: pdfKey,
+      selections: selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type}))
     });
-    if (!r.ok) throw new Error('HTTP '+r.status);
   } catch(e) {
-    stopPipelineAnimation(); overlay.classList.remove('show');
-    setStatus('error','Failed to start processing',e.message); isProcessing=false; return;
+    if (isNetworkFetchError(e)) {
+      try {
+        await postWithoutCors(processPath, processPayload);
+      } catch (fallbackError) {
+        stopPipelineAnimation(); overlay.classList.remove('show');
+        setStatus('error','Failed to start processing',fallbackError.message); isProcessing=false; return;
+      }
+    } else {
+      stopPipelineAnimation(); overlay.classList.remove('show');
+      setStatus('error','Failed to start processing',e.message); isProcessing=false; return;
+    }
   }
   setStatus('running','Generating slides…','AI models working');
   pollForCompletion();
@@ -2007,8 +2091,7 @@ clearBtn.addEventListener('click', () => {
   setStatus('running','Preparing upload link...','Connecting to upload service');
   setProgress(0); setStep(1);
   Object.keys(allCanvases).forEach(k=>delete allCanvases[k]);
-  uploadReady=false; chooseBtn.textContent='Preparing upload link...';
-  prepareUploadSlot();
+  uploadReady=true; chooseBtn.textContent='Choose PDF to Upload';
 });
 </script>
 </body>

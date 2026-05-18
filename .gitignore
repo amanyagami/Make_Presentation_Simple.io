@@ -20,12 +20,13 @@ sam-installation/
 # Generated Lambda layers
 hf-layer/
 pillow-layer/
-
+layer/
 # Generated archives
 hf-layer.zip
 pillow-layer.zip
 pymupdf-layer.zip
-
+en_US-ljspeech-high.onnx
+functions/generate_audio/en_US-ljspeech-high.onnx
 # PyMuPDF native binaries
 layer/python/pymupdf/*.so
 layer/python/pymupdf/**/*.so

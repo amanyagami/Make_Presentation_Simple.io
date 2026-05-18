@@ -3,8 +3,8 @@ from datetime import datetime, timezone
 
 s3       = boto3.client("s3")
 dynamodb = boto3.resource("dynamodb")
-BUCKET   = os.environ["BUCKET_NAME"]
-TABLE    = os.environ["TABLE_NAME"]
+BUCKET   = os.environ.get("BUCKET") or os.environ.get("BUCKET_NAME")
+TABLE    = os.environ.get("TABLE") or os.environ.get("TABLE_NAME")
 table    = dynamodb.Table(TABLE)
 
 CORS = {

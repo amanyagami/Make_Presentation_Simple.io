@@ -27,6 +27,15 @@ Resources:
         - AttributeName: upload_id
           KeyType: HASH
 
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: POST,OPTIONS,GET
+        AllowHeaders: Content-Type,Authorization
+        AllowOrigin: '*'
+
   CreateUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -43,11 +52,18 @@ Resources:
         - DynamoDBCrudPolicy:
             TableName: !Ref JobTable
       Events:
-        Api:
+        ApiPost:
           Type: Api
           Properties:
             Path: /upload
             Method: post
+            RestApiId: !Ref ApiGateway
+        ApiOptions:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: options
+            RestApiId: !Ref ApiGateway
 
   GenerateAudioFunction:
     Type: AWS::Serverless::Function
@@ -89,11 +105,18 @@ Resources:
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt ProcessStateMachine.Name
       Events:
-        Api:
+        ApiPreprocess:
           Type: Api
           Properties:
             Path: /preprocess/{upload_id}
             Method: post
+            RestApiId: !Ref ApiGateway
+        ApiOptions1:
+          Type: Api
+          Properties:
+            Path: /preprocess/{upload_id}
+            Method: options
+            RestApiId: !Ref ApiGateway
 
   StatusFunction:
     Type: AWS::Serverless::Function
@@ -108,11 +131,18 @@ Resources:
         - DynamoDBReadPolicy:
             TableName: !Ref JobTable
       Events:
-        Api:
+        ApiGet:
           Type: Api
           Properties:
             Path: /status/{upload_id}
             Method: get
+            RestApiId: !Ref ApiGateway
+        ApiOptions:
+          Type: Api
+          Properties:
+            Path: /status/{upload_id}
+            Method: options
+            RestApiId: !Ref ApiGateway
 
   RenderPreviewsFunction:
     Type: AWS::Serverless::Function
@@ -162,11 +192,18 @@ Resources:
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt ProcessStateMachine.Name
       Events:
-        Api:
+        ApiPost:
           Type: Api
           Properties:
             Path: /process/{upload_id}
             Method: post
+            RestApiId: !Ref ApiGateway
+        ApiOptions:
+          Type: Api
+          Properties:
+            Path: /process/{upload_id}
+            Method: options
+            RestApiId: !Ref ApiGateway
 
   CropFiguresFunction:
     Type: AWS::Serverless::Function
@@ -272,7 +309,7 @@ Resources:
 Outputs:
   ApiUrl:
     Description: API Gateway endpoint
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Value: !Sub "https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
   ArtifactBucketName:
     Value: !Ref ArtifactBucket
   JobTableName:

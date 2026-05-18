@@ -1,0 +1,71 @@
+Transform: AWS::Serverless-2016-10-31
+Description: PDF to deck pipeline with preprocess and process workflows (CORS Example)
+
+Parameters:
+  HFToken:
+    Type: String
+    NoEcho: true
+    Description: Hugging Face token used by call_model Lambda
+
+Globals:
+  Function:
+    Timeout: 60
+    MemorySize: 512
+
+Resources:
+  ArtifactBucket:
+    Type: AWS::S3::Bucket
+
+  JobTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: upload_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: upload_id
+          KeyType: HASH
+
+  MyApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: "'OPTIONS,POST,GET'"
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowOrigin: "'*'"
+
+  CreateUploadFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Runtime: python3.12
+      CodeUri: functions/create_upload/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+      Policies:
+        - S3WritePolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+      Events:
+        Api:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: post
+            RestApiId: !Ref MyApi
+
+# ...existing resources and functions...
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint
+    Value: !Sub "https://${MyApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+  ArtifactBucketName:
+    Value: !Ref ArtifactBucket
+  JobTableName:
+    Value: !Ref JobTable

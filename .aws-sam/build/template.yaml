@@ -22,6 +22,14 @@ Resources:
       KeySchema:
       - AttributeName: upload_id
         KeyType: HASH
+  ApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Cors:
+        AllowMethods: POST,OPTIONS,GET
+        AllowHeaders: Content-Type,Authorization
+        AllowOrigin: '*'
   CreateUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -42,11 +50,20 @@ Resources:
           TableName:
             Ref: JobTable
       Events:
-        Api:
+        ApiPost:
           Type: Api
           Properties:
             Path: /upload
             Method: post
+            RestApiId:
+              Ref: ApiGateway
+        ApiOptions:
+          Type: Api
+          Properties:
+            Path: /upload
+            Method: options
+            RestApiId:
+              Ref: ApiGateway
     Metadata:
       SamResourceId: CreateUploadFunction
   GenerateAudioFunction:
@@ -104,11 +121,20 @@ Resources:
             - ProcessStateMachine
             - Name
       Events:
-        Api:
+        ApiPreprocess:
           Type: Api
           Properties:
             Path: /preprocess/{upload_id}
             Method: post
+            RestApiId:
+              Ref: ApiGateway
+        ApiOptions1:
+          Type: Api
+          Properties:
+            Path: /preprocess/{upload_id}
+            Method: options
+            RestApiId:
+              Ref: ApiGateway
     Metadata:
       SamResourceId: StartPreprocessFunction
   StatusFunction:
@@ -126,11 +152,20 @@ Resources:
           TableName:
             Ref: JobTable
       Events:
-        Api:
+        ApiGet:
           Type: Api
           Properties:
             Path: /status/{upload_id}
             Method: get
+            RestApiId:
+              Ref: ApiGateway
+        ApiOptions:
+          Type: Api
+          Properties:
+            Path: /status/{upload_id}
+            Method: options
+            RestApiId:
+              Ref: ApiGateway
     Metadata:
       SamResourceId: StatusFunction
   RenderPreviewsFunction:
@@ -197,11 +232,20 @@ Resources:
             - ProcessStateMachine
             - Name
       Events:
-        Api:
+        ApiPost:
           Type: Api
           Properties:
             Path: /process/{upload_id}
             Method: post
+            RestApiId:
+              Ref: ApiGateway
+        ApiOptions:
+          Type: Api
+          Properties:
+            Path: /process/{upload_id}
+            Method: options
+            RestApiId:
+              Ref: ApiGateway
     Metadata:
       SamResourceId: StartProcessingFunction
   CropFiguresFunction:
@@ -356,7 +400,7 @@ Outputs:
   ApiUrl:
     Description: API Gateway endpoint
     Value:
-      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
+      Fn::Sub: https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/Prod/
   ArtifactBucketName:
     Value:
       Ref: ArtifactBucket
