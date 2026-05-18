@@ -1462,6 +1462,46 @@ document.getElementById('themeToggle').addEventListener('click', function() {
 const API_BASE = "https://li821zmmw4.execute-api.us-east-1.amazonaws.com/Prod";
 function url(path) { return API_BASE.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path); }
 
+async function postJson(path, payload) {
+  // Keep cross-origin requests "simple" by not forcing application/json.
+  // Some deployed API Gateway stages in this project do not answer OPTIONS
+  // preflight on every route, which makes fetch fail before Lambda runs.
+  const r = await fetch(url(path), {
+    method: 'POST',
+    body: JSON.stringify(payload || {})
+  });
+  const text = await r.text();
+  let data = null;
+  if (text) {
+    try { data = JSON.parse(text); } catch { data = { message: text }; }
+  }
+  if (!r.ok) {
+    const detail = data?.message || data?.error || text || `Server error ${r.status}`;
+    const err = new Error(detail);
+    err.status = r.status;
+    throw err;
+  }
+  return data || {};
+}
+
+async function startPreprocessing() {
+  const payload = { upload_id: uploadId, pdf_key: pdfKey };
+  try {
+    return await postJson('/preprocess/' + encodeURIComponent(uploadId), payload);
+  } catch (firstError) {
+    // Older deployments used /process without selections to start preprocessing.
+    // Try that route so the frontend works against both backend versions.
+    try {
+      return await postJson('/process/' + encodeURIComponent(uploadId), payload);
+    } catch (secondError) {
+      if (firstError instanceof TypeError || [403, 404, 405].includes(firstError.status)) {
+        throw secondError;
+      }
+      throw firstError;
+    }
+  }
+}
+
 /* ── STATE ── */
 let uploadId = null, pdfKey = null, uploadUrl = null;
 let uploadReady = false, uploadPrepPromise = null, prepTicker = null;
@@ -1766,12 +1806,13 @@ async function uploadDone() {
   setStatus('running','Upload complete','Triggering preprocessing…'); setProgress(25);
   uploadProgress.style.display = 'none';
   try {
-    const r = await fetch(url('/process/' + encodeURIComponent(uploadId)), {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ upload_id: uploadId, pdf_key: pdfKey })
-    });
-    if (!r.ok) throw new Error('Server error ' + r.status);
-  } catch(e) { setStatus('error','Failed to start preprocessing', e.message); return; }
+    await startPreprocessing();
+  } catch(e) {
+    setStatus('error','Failed to start preprocessing', e.message || 'Unable to reach API');
+    chooseBtn.disabled = false;
+    chooseBtn.textContent = 'Choose PDF to Upload';
+    return;
+  }
   cardTitle.textContent = 'Processing your PDF…'; cardSub.textContent = 'Rendering page previews';
   clearBtn.style.display = 'block'; skeletonGrid.style.display = 'grid'; dropZone.style.display = 'none';
   setStep(2); pollForPreviews();
@@ -1944,11 +1985,11 @@ processBtn.addEventListener('click', async () => {
   startPipelineAnimation();
 
   try {
-    const r = await fetch(url('/process/'+encodeURIComponent(uploadId)), {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ upload_id:uploadId, pdf_key:pdfKey, selections:selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type})) })
+    await postJson('/process/'+encodeURIComponent(uploadId), {
+      upload_id: uploadId,
+      pdf_key: pdfKey,
+      selections: selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type}))
     });
-    if (!r.ok) throw new Error('HTTP '+r.status);
   } catch(e) {
     stopPipelineAnimation(); overlay.classList.remove('show');
     setStatus('error','Failed to start processing',e.message); isProcessing=false; return;
