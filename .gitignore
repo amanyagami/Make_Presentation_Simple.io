@@ -33,3 +33,4 @@ layer/python/pymupdf/__pycache__/
 
 # Optional generated docs/samples
 sample.pdf
+functions/generate_audio/en_US-ljspeech-high.onnx
