@@ -1462,6 +1462,98 @@ document.getElementById('themeToggle').addEventListener('click', function() {
 const API_BASE = "https://li821zmmw4.execute-api.us-east-1.amazonaws.com/Prod";
 function url(path) { return API_BASE.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path); }
 
+function parseApiText(text) {
+  if (!text) return {};
+  try { return JSON.parse(text); }
+  catch { return { message: text }; }
+}
+
+function isNetworkFetchError(error) {
+  return error instanceof TypeError || /failed to fetch|network/i.test(String(error?.message || ''));
+}
+
+function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+
+async function postJson(path, payload) {
+  // Do not add Content-Type here. The backend parses the JSON body without
+  // relying on that header, and leaving it off avoids a browser OPTIONS
+  // preflight on API Gateway deployments that do not publish OPTIONS routes.
+  const r = await fetch(url(path), {
+    method: 'POST',
+    body: JSON.stringify(payload || {})
+  });
+  const data = parseApiText(await r.text());
+  if (!r.ok) {
+    const detail = data?.message || data?.error || `Server error ${r.status}`;
+    const err = new Error(detail);
+    err.status = r.status;
+    throw err;
+  }
+  return data;
+}
+
+async function postWithoutCors(path, payload) {
+  // Last-resort fallback for deployed APIs that perform the Lambda action but
+  // omit CORS headers on the response. The opaque response cannot be inspected,
+  // so callers should verify progress by polling /status afterwards.
+  await fetch(url(path), {
+    method: 'POST',
+    mode: 'no-cors',
+    body: JSON.stringify(payload || {})
+  });
+  return { opaque: true };
+}
+
+async function fetchStatusOnce() {
+  if (!uploadId) return null;
+  try {
+    const r = await fetch(url('/status/' + encodeURIComponent(uploadId)));
+    if (!r.ok) return null;
+    return await r.json();
+  } catch {
+    return null;
+  }
+}
+
+function preprocessingHasStarted(status) {
+  if (!status) return false;
+  const state = String(status.state || '').toLowerCase();
+  const step = String(status.step || '').toLowerCase();
+  return state === 'running' || state === 'done' ||
+    step.includes('preprocess') || step.includes('render') ||
+    Number(status.progress || 0) >= 10;
+}
+
+async function startPreprocessing() {
+  const encodedId = encodeURIComponent(uploadId);
+  const payload = { upload_id: uploadId, pdf_key: pdfKey };
+  const preprocessPath = '/preprocess/' + encodedId;
+
+  try {
+    return await postJson(preprocessPath, payload);
+  } catch (error) {
+    if (!isNetworkFetchError(error)) throw error;
+
+    // If the normal CORS request fails as "Failed to fetch", fire the same
+    // request in no-cors mode and let the existing status poll confirm progress.
+    await postWithoutCors(preprocessPath, payload);
+    await sleep(1200);
+    const status = await fetchStatusOnce();
+    if (preprocessingHasStarted(status)) return { opaque: true };
+
+    // Very old backends started preprocessing from /process when selections were
+    // absent. Only try this after /preprocess did not visibly advance the job.
+    const processPath = '/process/' + encodedId;
+    try {
+      return await postJson(processPath, payload);
+    } catch (legacyError) {
+      if (!isNetworkFetchError(legacyError)) throw legacyError;
+      await postWithoutCors(processPath, payload);
+      return { opaque: true };
+    }
+  }
+}
+
 /* ── STATE ── */
 let uploadId = null, pdfKey = null, uploadUrl = null;
 let uploadReady = false, uploadPrepPromise = null, prepTicker = null;
@@ -1766,12 +1858,13 @@ async function uploadDone() {
   setStatus('running','Upload complete','Triggering preprocessing…'); setProgress(25);
   uploadProgress.style.display = 'none';
   try {
-    const r = await fetch(url('/process/' + encodeURIComponent(uploadId)), {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ upload_id: uploadId, pdf_key: pdfKey })
-    });
-    if (!r.ok) throw new Error('Server error ' + r.status);
-  } catch(e) { setStatus('error','Failed to start preprocessing', e.message); return; }
+    await startPreprocessing();
+  } catch(e) {
+    setStatus('error','Failed to start preprocessing', e.message || 'Unable to reach API');
+    chooseBtn.disabled = false;
+    chooseBtn.textContent = 'Choose PDF to Upload';
+    return;
+  }
   cardTitle.textContent = 'Processing your PDF…'; cardSub.textContent = 'Rendering page previews';
   clearBtn.style.display = 'block'; skeletonGrid.style.display = 'grid'; dropZone.style.display = 'none';
   setStep(2); pollForPreviews();
@@ -1943,15 +2036,26 @@ processBtn.addEventListener('click', async () => {
   isProcessing=true;
   startPipelineAnimation();
 
+  const processPath = '/process/' + encodeURIComponent(uploadId);
+  const processPayload = {
+    upload_id: uploadId,
+    pdf_key: pdfKey,
+    selections: selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type}))
+  };
   try {
-    const r = await fetch(url('/process/'+encodeURIComponent(uploadId)), {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ upload_id:uploadId, pdf_key:pdfKey, selections:selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type})) })
-    });
-    if (!r.ok) throw new Error('HTTP '+r.status);
+    await postJson(processPath, processPayload);
   } catch(e) {
-    stopPipelineAnimation(); overlay.classList.remove('show');
-    setStatus('error','Failed to start processing',e.message); isProcessing=false; return;
+    if (isNetworkFetchError(e)) {
+      try {
+        await postWithoutCors(processPath, processPayload);
+      } catch (fallbackError) {
+        stopPipelineAnimation(); overlay.classList.remove('show');
+        setStatus('error','Failed to start processing',fallbackError.message); isProcessing=false; return;
+      }
+    } else {
+      stopPipelineAnimation(); overlay.classList.remove('show');
+      setStatus('error','Failed to start processing',e.message); isProcessing=false; return;
+    }
   }
   setStatus('running','Generating slides…','AI models working');
   pollForCompletion();
