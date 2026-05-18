@@ -1,4 +1,35 @@
 pdf_to_ppt.ipynb
 hf_token.txt
 uv.lock
- 
+# Large model files
+*.onnx
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+dist/
+build/
+
+# SAM build/install output
+sam-installation/
+
+# Generated Lambda layers
+hf-layer/
+pillow-layer/
+
+# Generated archives
+hf-layer.zip
+pillow-layer.zip
+pymupdf-layer.zip
+
+# PyMuPDF native binaries
+layer/python/pymupdf/*.so
+layer/python/pymupdf/**/*.so
+layer/python/pymupdf/__pycache__/
+
+# Optional generated docs/samples
+sample.pdf
