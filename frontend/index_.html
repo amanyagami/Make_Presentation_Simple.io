@@ -1462,94 +1462,42 @@ document.getElementById('themeToggle').addEventListener('click', function() {
 const API_BASE = "https://li821zmmw4.execute-api.us-east-1.amazonaws.com/Prod";
 function url(path) { return API_BASE.replace(/\/$/, '') + (path.startsWith('/') ? path : '/' + path); }
 
-function parseApiText(text) {
-  if (!text) return {};
-  try { return JSON.parse(text); }
-  catch { return { message: text }; }
-}
-
-function isNetworkFetchError(error) {
-  return error instanceof TypeError || /failed to fetch|network/i.test(String(error?.message || ''));
-}
-
-function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
-
 async function postJson(path, payload) {
-  // Do not add Content-Type here. The backend parses the JSON body without
-  // relying on that header, and leaving it off avoids a browser OPTIONS
-  // preflight on API Gateway deployments that do not publish OPTIONS routes.
+  // Keep cross-origin requests "simple" by not forcing application/json.
+  // Some deployed API Gateway stages in this project do not answer OPTIONS
+  // preflight on every route, which makes fetch fail before Lambda runs.
   const r = await fetch(url(path), {
     method: 'POST',
     body: JSON.stringify(payload || {})
   });
-  const data = parseApiText(await r.text());
+  const text = await r.text();
+  let data = null;
+  if (text) {
+    try { data = JSON.parse(text); } catch { data = { message: text }; }
+  }
   if (!r.ok) {
-    const detail = data?.message || data?.error || `Server error ${r.status}`;
+    const detail = data?.message || data?.error || text || `Server error ${r.status}`;
     const err = new Error(detail);
     err.status = r.status;
     throw err;
   }
-  return data;
-}
-
-async function postWithoutCors(path, payload) {
-  // Last-resort fallback for deployed APIs that perform the Lambda action but
-  // omit CORS headers on the response. The opaque response cannot be inspected,
-  // so callers should verify progress by polling /status afterwards.
-  await fetch(url(path), {
-    method: 'POST',
-    mode: 'no-cors',
-    body: JSON.stringify(payload || {})
-  });
-  return { opaque: true };
-}
-
-async function fetchStatusOnce() {
-  if (!uploadId) return null;
-  try {
-    const r = await fetch(url('/status/' + encodeURIComponent(uploadId)));
-    if (!r.ok) return null;
-    return await r.json();
-  } catch {
-    return null;
-  }
-}
-
-function preprocessingHasStarted(status) {
-  if (!status) return false;
-  const state = String(status.state || '').toLowerCase();
-  const step = String(status.step || '').toLowerCase();
-  return state === 'running' || state === 'done' ||
-    step.includes('preprocess') || step.includes('render') ||
-    Number(status.progress || 0) >= 10;
+  return data || {};
 }
 
 async function startPreprocessing() {
-  const encodedId = encodeURIComponent(uploadId);
   const payload = { upload_id: uploadId, pdf_key: pdfKey };
-  const preprocessPath = '/preprocess/' + encodedId;
-
   try {
-    return await postJson(preprocessPath, payload);
-  } catch (error) {
-    if (!isNetworkFetchError(error)) throw error;
-
-    // If the normal CORS request fails as "Failed to fetch", fire the same
-    // request in no-cors mode and let the existing status poll confirm progress.
-    await postWithoutCors(preprocessPath, payload);
-    await sleep(1200);
-    const status = await fetchStatusOnce();
-    if (preprocessingHasStarted(status)) return { opaque: true };
-
-    // Very old backends started preprocessing from /process when selections were
-    // absent. Only try this after /preprocess did not visibly advance the job.
-    const processPath = '/process/' + encodedId;
+    return await postJson('/preprocess/' + encodeURIComponent(uploadId), payload);
+  } catch (firstError) {
+    // Older deployments used /process without selections to start preprocessing.
+    // Try that route so the frontend works against both backend versions.
     try {
-      return await postJson(processPath, payload);
-    } catch (legacyError) {
-      if (!isNetworkFetchError(legacyError)) throw legacyError;
-      await postWithoutCors(processPath, payload);
-      return { opaque: true };
+      return await postJson('/process/' + encodeURIComponent(uploadId), payload);
+    } catch (secondError) {
+      if (firstError instanceof TypeError || [403, 404, 405].includes(firstError.status)) {
+        throw secondError;
+      }
+      throw firstError;
     }
   }
 }
@@ -2043,7 +1991,11 @@ processBtn.addEventListener('click', async () => {
     selections: selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type}))
   };
   try {
-    await postJson(processPath, processPayload);
+    await postJson('/process/'+encodeURIComponent(uploadId), {
+      upload_id: uploadId,
+      pdf_key: pdfKey,
+      selections: selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type}))
+    });
   } catch(e) {
     if (isNetworkFetchError(e)) {
       try {
