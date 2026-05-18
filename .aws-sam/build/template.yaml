@@ -7,7 +7,6 @@ Parameters:
     Description: Hugging Face token used by call_model Lambda
 Globals:
   Function:
-    Runtime: python3.12
     Timeout: 60
     MemorySize: 512
 Resources:
@@ -26,6 +25,7 @@ Resources:
   CreateUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: CreateUploadFunction
       Handler: app.lambda_handler
       Environment:
@@ -49,17 +49,46 @@ Resources:
             Method: post
     Metadata:
       SamResourceId: CreateUploadFunction
+  GenerateAudioFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Timeout: 900
+      MemorySize: 2048
+      Environment:
+        Variables:
+          BUCKET:
+            Ref: ArtifactBucket
+          TABLE:
+            Ref: JobTable
+          PIPER_MODEL: en_US-ljspeech-high.onnx
+      Policies:
+      - S3CrudPolicy:
+          BucketName:
+            Ref: ArtifactBucket
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: JobTable
+      ImageUri: generateaudiofunction:python3.12-v1
+    Metadata:
+      DockerContext: /home/yagami/bigssd/ppt_maker/functions/generate_audio
+      DockerTag: python3.12-v1
+      Dockerfile: Dockerfile
+      SamResourceId: GenerateAudioFunction
   StartPreprocessFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: StartPreprocessFunction
       Handler: app.lambda_handler
       Environment:
         Variables:
           TABLE:
             Ref: JobTable
-          STATE_MACHINE_ARN:
+          PREPROCESS_STATE_MACHINE_ARN:
             Ref: PreprocessStateMachine
+          PROCESS_STATE_MACHINE_ARN:
+            Ref: ProcessStateMachine
       Policies:
       - DynamoDBCrudPolicy:
           TableName:
@@ -68,6 +97,11 @@ Resources:
           StateMachineName:
             Fn::GetAtt:
             - PreprocessStateMachine
+            - Name
+      - StepFunctionsExecutionPolicy:
+          StateMachineName:
+            Fn::GetAtt:
+            - ProcessStateMachine
             - Name
       Events:
         Api:
@@ -80,6 +114,7 @@ Resources:
   StatusFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: StatusFunction
       Handler: app.lambda_handler
       Environment:
@@ -101,6 +136,7 @@ Resources:
   RenderPreviewsFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: RenderPreviewsFunction
       Handler: app.lambda_handler
       Environment:
@@ -121,6 +157,7 @@ Resources:
   ExtractTextFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: ExtractTextFunction
       Handler: app.lambda_handler
       Environment:
@@ -141,6 +178,7 @@ Resources:
   StartProcessingFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: StartProcessingFunction
       Handler: app.lambda_handler
       Environment:
@@ -169,6 +207,7 @@ Resources:
   CropFiguresFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: CropFiguresFunction
       Handler: app.lambda_handler
       Environment:
@@ -189,6 +228,7 @@ Resources:
   CallModelFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: CallModelFunction
       Handler: app.lambda_handler
       Timeout: 300
@@ -212,6 +252,7 @@ Resources:
   WriteFinalJsonFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: WriteFinalJsonFunction
       Handler: app.lambda_handler
       Environment:
@@ -232,6 +273,7 @@ Resources:
   CleanupDataFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: CleanupDataFunction
       Handler: app.lambda_handler
       Environment:
@@ -282,6 +324,10 @@ Resources:
           Fn::GetAtt:
           - CallModelFunction
           - Arn
+        GenerateAudioFunctionArn:
+          Fn::GetAtt:
+          - GenerateAudioFunction
+          - Arn
         WriteFinalJsonFunctionArn:
           Fn::GetAtt:
           - WriteFinalJsonFunction
@@ -297,6 +343,9 @@ Resources:
       - LambdaInvokePolicy:
           FunctionName:
             Ref: CallModelFunction
+      - LambdaInvokePolicy:
+          FunctionName:
+            Ref: GenerateAudioFunction
       - LambdaInvokePolicy:
           FunctionName:
             Ref: WriteFinalJsonFunction

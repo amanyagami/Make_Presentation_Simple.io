@@ -13,7 +13,7 @@ def generate_response(prompt, hf_token):
     Returns:
         tuple: (thinking_text, final_text)
     """
-    client = InferenceClient(token=hf_token, provider="nscale")
+    client = InferenceClient(token=hf_token, provider="nscale", timeout=120)
 
     resp = client.chat_completion(
         model="Qwen/Qwen3-4B-Instruct-2507",
@@ -38,7 +38,7 @@ def generate_response(prompt, hf_token):
 
 def generate_vlm_response(prompt, hf_token, image_path=None):
 
-    client = InferenceClient(token=hf_token, provider="nscale")
+    client = InferenceClient(token=hf_token, provider="nscale", timeout=120)
 
     content_blocks = []
 

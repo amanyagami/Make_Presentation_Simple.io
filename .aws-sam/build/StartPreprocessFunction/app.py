@@ -1,4 +1,5 @@
-import os, json, uuid, boto3
+import os, json, uuid, boto3, time
+from datetime import datetime, timezone
 
 dynamodb       = boto3.resource("dynamodb")
 stepfunctions  = boto3.client("stepfunctions")
@@ -50,6 +51,9 @@ def lambda_handler(event, context):
 
     selections = body.get("selections")   # None = preprocessing call
 
+    started_at = datetime.now(timezone.utc).isoformat()
+    started_perf = time.perf_counter()
+
     if selections is None:
         # ── FIRST CALL: preprocess (render previews + extract text) ──────────
         state_machine_arn = PREPROCESS_ARN
@@ -77,10 +81,20 @@ def lambda_handler(event, context):
 
     table.update_item(
         Key={"upload_id": upload_id},
-        UpdateExpression="SET #s=:s, step=:step, progress=:p, message=:m",
+        UpdateExpression="SET #s=:s, step=:step, progress=:p, message=:m, timing_start_preprocess=:tim",
         ExpressionAttributeNames={"#s": "state"},
         ExpressionAttributeValues={
-            ":s":new_state, ":step":new_step, ":p":progress, ":m":message},
+            ":s": new_state,
+            ":step": new_step,
+            ":p": progress,
+            ":m": message,
+            ":tim": {
+                "started_at": started_at,
+                "ended_at": datetime.now(timezone.utc).isoformat(),
+                "elapsed_ms": int(round((time.perf_counter() - started_perf) * 1000)),
+                "request_id": getattr(context, "aws_request_id", None),
+            },
+        },
     )
 
     resp = stepfunctions.start_execution(

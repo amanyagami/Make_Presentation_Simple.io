@@ -1,4 +1,5 @@
-import os, json, tempfile, boto3
+import os, json, tempfile, boto3, time
+from datetime import datetime, timezone
 from pathlib import Path
 import fitz  # PyMuPDF
 
@@ -13,6 +14,8 @@ table    = dynamodb.Table(TABLE)
 def handler(event, context):
     upload_id = event["upload_id"]
     pdf_key   = event["pdf_key"]
+    started_at = datetime.now(timezone.utc).isoformat()
+    started_perf = time.perf_counter()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         pdf_path = Path(tmpdir) / "input.pdf"
@@ -44,7 +47,7 @@ def handler(event, context):
     # KEY IMPROVEMENT: store previews in DynamoDB so status endpoint returns them
     table.update_item(
         Key={"upload_id": upload_id},
-        UpdateExpression="SET #s = :s, step = :step, progress = :p, message = :m, previews = :v",
+        UpdateExpression="SET #s = :s, step = :step, progress = :p, message = :m, previews = :v, timing_render_previews = :tim",
         ExpressionAttributeNames={"#s": "state"},
         ExpressionAttributeValues={
             ":s":    "previews_ready",
@@ -52,6 +55,13 @@ def handler(event, context):
             ":p":    25,
             ":m":    f"Page previews ready ({len(previews)} pages)",
             ":v":    previews,
+            ":tim": {
+                "started_at": started_at,
+                "ended_at": datetime.now(timezone.utc).isoformat(),
+                "elapsed_ms": int(round((time.perf_counter() - started_perf) * 1000)),
+                "request_id": getattr(context, "aws_request_id", None),
+                "pages": len(previews),
+            },
         },
     )
 

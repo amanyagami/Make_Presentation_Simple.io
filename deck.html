@@ -258,6 +258,41 @@
 
   .progress-text{display:flex;justify-content:space-between;font-size:0.8rem;color:var(--muted)}
 
+  .stage-tracker{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:12px;
+  }
+  .stage-chip{
+    padding:7px 10px;
+    border-radius:999px;
+    background:var(--soft);
+    color:var(--muted);
+    border:1px solid transparent;
+    font-size:0.75rem;
+    font-weight:600;
+    letter-spacing:0.01em;
+    transition:transform .2s ease, background .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+  }
+  .stage-chip.active{
+    background:rgba(37,99,235,0.1);
+    color:var(--accent);
+    border-color:rgba(37,99,235,0.18);
+    box-shadow:0 0 0 3px rgba(37,99,235,0.08);
+    transform:translateY(-1px);
+  }
+  .stage-chip.done{
+    background:rgba(22,163,74,0.1);
+    color:#15803d;
+    border-color:rgba(22,163,74,0.14);
+  }
+  .stage-chip.error{
+    background:rgba(239,68,68,0.1);
+    color:#b91c1c;
+    border-color:rgba(239,68,68,0.16);
+  }
+
   /* selections list */
   .selections-title{font-weight:600;font-size:0.95rem;margin-bottom:8px;margin-top:10px}
   .selections{max-height:300px;overflow-y:auto;border:1px solid #f1f7ff;border-radius:8px;background:#fafbff}
@@ -394,6 +429,7 @@
   .processing-info { flex:1; min-width:0;}
   .processing-title { font-size:1.15rem;font-weight:700;margin-bottom:6px }
   .processing-sub { color:rgba(255,255,255,0.85); margin-bottom:14px }
+  .processing-step { color:rgba(255,255,255,0.95); font-weight:600; margin-top:-6px; margin-bottom:12px; font-size:0.95rem; }
   .processing-progress { height:12px;background:rgba(255,255,255,0.06);border-radius:999px;overflow:hidden;margin-bottom:8px; }
   .processing-progress .bar { height:100%; width:0%; background:linear-gradient(90deg,var(--accent),var(--accent-2)); transition:width .5s ease; box-shadow:0 8px 24px rgba(37,99,235,0.14); }
   .processing-pct { font-weight:700; font-size:0.95rem; color:rgba(255,255,255,0.95) }
@@ -627,6 +663,7 @@
             <div class="small" id="progressPct">0%</div>
             <div id="manifestArea" style="display:none"><a id="manifestLink" class="muted" target="_blank" rel="noopener" style="font-size:0.75rem">Open slides →</a></div>
           </div>
+          <div id="stageTracker" class="stage-tracker" aria-label="Pipeline stages"></div>
         </div>
 
         <!-- Selections Card – hidden until previews are rendered -->
@@ -682,6 +719,7 @@
       <div class="processing-info">
         <div class="processing-title" id="procTitle">Generating slides</div>
         <div class="processing-sub" id="procSub">Your selections are being processed. This may take a moment.</div>
+        <div class="processing-step" id="procStep">Current step: waiting</div>
         <div class="processing-progress" aria-hidden="false">
           <div id="procBar" class="bar" style="width:0%"></div>
         </div>
@@ -708,6 +746,7 @@ const progressBar = document.getElementById('progressBar');
 const progressPct = document.getElementById('progressPct');
 const manifestArea = document.getElementById('manifestArea');
 const manifestLink = document.getElementById('manifestLink');
+const stageTracker = document.getElementById('stageTracker');
 const selectionsEl = document.getElementById('selections');
 const statusMain = document.getElementById('statusMain');
 const statusSub = document.getElementById('statusSub');
@@ -726,6 +765,7 @@ const procBar = document.getElementById('procBar');
 const procPct = document.getElementById('procPct');
 const procTitle = document.getElementById('procTitle');
 const procSub = document.getElementById('procSub');
+const procStep = document.getElementById('procStep');
 const procClose = document.getElementById('procClose');
 
 const viewSlidesBtn = document.getElementById('viewSlidesBtn');
@@ -741,6 +781,17 @@ let previews = [];
 let selections = [];
 let pollInterval = null;
 let isProcessing = false;
+
+const pipelineStages = [
+  { key: 'start_preprocess', label: 'Start preprocess' },
+  { key: 'extract_text', label: 'Extract text' },
+  { key: 'render_previews', label: 'Render previews' },
+  { key: 'crop_figures', label: 'Crop figures' },
+  { key: 'call_model', label: 'Call model' },
+  { key: 'generate_audio', label: 'Generate audio' },
+  { key: 'write_final_json', label: 'Write final JSON' },
+  { key: 'cleanup_data', label: 'Cleanup data' },
+];
 
 /* Drawing state */
 let activeDrawing = null;
@@ -769,6 +820,46 @@ function revealControls(){
   uploadBtn.classList.add('controls-visible');
   uploadBtn.disabled = false;
 }
+
+function renderStageTracker(){
+  if (!stageTracker) return;
+  stageTracker.innerHTML = pipelineStages.map((stage) => (
+    `<span class="stage-chip" data-stage="${stage.key}">${stage.label}</span>`
+  )).join('');
+}
+
+function formatStepLabel(step) {
+  if (!step) return 'Waiting for the next step';
+  const raw = String(step).replace(/_/g, ' ').trim();
+  return raw.charAt(0).toUpperCase() + raw.slice(1);
+}
+
+function updateStageTracker(step, state) {
+  const current = String(step || '').toLowerCase();
+  const isDone = state === 'done';
+  const isError = state === 'error';
+  if (!stageTracker) return;
+
+  stageTracker.querySelectorAll('.stage-chip').forEach((chip) => {
+    chip.classList.remove('active', 'done', 'error');
+    const chipStage = chip.getAttribute('data-stage') || '';
+    if (isDone) {
+      chip.classList.add('done');
+      return;
+    }
+    if (isError) {
+      chip.classList.add(chipStage === current ? 'error' : 'done');
+      return;
+    }
+    if (current.startsWith(chipStage)) {
+      chip.classList.add('active');
+    } else if (pipelineStages.findIndex((stage) => stage.key === chipStage) < pipelineStages.findIndex((stage) => stage.key === current)) {
+      chip.classList.add('done');
+    }
+  });
+}
+
+renderStageTracker();
 
 /* Safe helpers */
 function safeUrl(base, id) {
@@ -922,6 +1013,7 @@ async function fetchStatusOnce() {
     if (!res.ok) return;
     const obj = await res.json();
     if (obj.pdf_filename) currentUpload.pdf_filename = obj.pdf_filename;
+    if (obj.viewer_url) currentUpload.viewer_url = obj.viewer_url;
     if (obj.progress !== undefined) updateProgress(obj.progress);
     if (obj.previews && obj.previews.length) {
       skeletonPreviews.style.display = 'none';
@@ -1198,6 +1290,7 @@ function showProcessingOverlay(){
   procBar.style.width = '0%';
   procPct.textContent = '0%';
   setStatus('Processing', 'Preparing…');
+  procStep.textContent = 'Current step: waiting';
 }
 function hideProcessingOverlay(){
   processingOverlay.style.display = 'none';
@@ -1231,8 +1324,13 @@ function startPolling(upload_id){
         procBar.style.width = Math.max(0, Math.min(100, Number(data.progress))) + '%';
         procPct.textContent = Math.max(0, Math.min(100, Number(data.progress))) + '%';
       }
+      if (data.step) {
+        updateStageTracker(data.step, data.state);
+        procStep.textContent = `Current step: ${formatStepLabel(data.step)}`;
+      }
       if (data.message) setStatus((data.state === 'error' ? 'Error' : statusMain.textContent), data.message);
       if (data.pdf_filename && !currentUpload.pdf_filename) currentUpload.pdf_filename = data.pdf_filename;
+      if (data.viewer_url) currentUpload.viewer_url = data.viewer_url;
       if (data.manifest_url) showManifest(data.manifest_url);
 
       if (data.state === 'done' || data.state === 'error') {
@@ -1244,15 +1342,20 @@ function startPolling(upload_id){
           setStatus('Done', 'Processing complete');
           procTitle.textContent = 'Done';
           procSub.textContent = 'Slides ready to view';
+          procStep.textContent = 'Current step: complete';
+          updateStageTracker(data.step, data.state);
           setTimeout(() => {
             hideProcessingOverlay();
             viewSlidesBtn.classList.add('show');
-            viewSlidesBtn.onclick = () => { window.open('/index.html','_blank'); };
+            const viewerUrl = currentUpload.viewer_url || (data.manifest_url ? data.manifest_url.replace(/final\.json$/, '') : '/index.html');
+            viewSlidesBtn.onclick = () => { window.open(viewerUrl, '_blank'); };
           }, 800);
         } else {
           setStatus('Error', data.message || 'Processing failed');
           procTitle.textContent = 'Error';
           procSub.textContent = data.message || 'Processing failed';
+          procStep.textContent = data.step ? `Current step: ${formatStepLabel(data.step)}` : 'Current step: error';
+          updateStageTracker(data.step, 'error');
           setTimeout(() => {
             hideProcessingOverlay();
             mainWrap.classList.remove('minimal-hidden');
@@ -1281,9 +1384,9 @@ function setStatus(main, sub){
   statusMain.textContent = main || '';
   statusSub.textContent = sub || '';
 }
-function showManifest(url){
+function showManifest(manifestUrl){
   manifestArea.style.display = 'block';
-  manifestLink.href = '/index.html';
+  manifestLink.href = currentUpload.viewer_url || manifestUrl.replace(/final\.json$/, '');
   manifestLink.textContent = 'Open slides →';
 }
 

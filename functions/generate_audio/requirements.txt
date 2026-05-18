@@ -1,0 +1,3 @@
+piper-tts
+onnxruntime
+boto3

@@ -1,0 +1,1210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MPS · Make Presentation Simpler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow-x:hidden}
+
+:root{
+  --bg:#f7f6f3;
+  --surface:#ffffff;
+  --surface2:#f2f1ee;
+  --surface3:#ece9e3;
+  --border:rgba(0,0,0,0.08);
+  --border-md:rgba(0,0,0,0.13);
+  --text:#1a1814;
+  --text2:#6b6760;
+  --muted:#a8a4a0;
+  --r:12px;
+  --r-sm:8px;
+
+  /* accents */
+  --indigo:#4f5ef7;
+  --indigo-l:#eef0ff;
+  --indigo-m:rgba(79,94,247,0.12);
+  --sky:#0ea5e9;
+  --sky-l:#e0f5ff;
+  --emerald:#059669;
+  --emerald-l:#d1fae5;
+  --amber:#d97706;
+  --amber-l:#fef3c7;
+  --rose:#e11d48;
+  --rose-l:#fff1f5;
+  --violet:#7c3aed;
+  --violet-l:#f5f3ff;
+}
+
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* ── ONBOARDING ─────────────────────────────── */
+#onboarding{
+  position:fixed;inset:0;z-index:1000;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:2rem;
+}
+#onboarding.fade-out{animation:obOut .5s ease forwards}
+@keyframes obOut{to{opacity:0;pointer-events:none}}
+
+.ob-wordmark{
+  font-family:'Instrument Serif',serif;
+  font-size:clamp(2rem,5vw,3.2rem);
+  font-weight:400;
+  color:var(--text);
+  text-align:center;
+  margin-bottom:.4rem;
+  animation:fadeUp .7s ease both;
+}
+.ob-sub{
+  font-size:.9rem;color:var(--text2);text-align:center;margin-bottom:3.5rem;
+  animation:fadeUp .7s ease .1s both;
+}
+
+.ob-steps{
+  display:flex;align-items:center;gap:0;
+  animation:fadeUp .6s ease .25s both;
+  flex-wrap:wrap;justify-content:center;gap:1rem;
+}
+
+.ob-step-pill{
+  display:flex;align-items:center;gap:.6rem;
+  padding:.6rem 1.1rem;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:100px;
+  font-size:.85rem;font-weight:500;
+  color:var(--text2);
+  transition:all .2s;
+}
+.ob-step-pill[data-active]{
+  border-color:var(--indigo);
+  background:var(--indigo-l);
+  color:var(--indigo);
+}
+.ob-step-icon{width:18px;height:18px;opacity:.7}
+.ob-step-pill[data-active] .ob-step-icon{opacity:1}
+
+.ob-arrow-mini{color:var(--muted);font-size:1.1rem;align-self:center;display:none}
+@media(min-width:640px){.ob-arrow-mini{display:block}}
+
+.ob-cta-btn{
+  margin-top:2.5rem;
+  padding:.85rem 2.5rem;
+  background:var(--text);
+  color:#fff;
+  border:none;border-radius:100px;
+  font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:600;
+  cursor:pointer;
+  letter-spacing:-.01em;
+  transition:opacity .18s,transform .18s;
+  animation:fadeUp .6s ease .5s both;
+}
+.ob-cta-btn:hover{opacity:.88;transform:translateY(-1px)}
+.ob-skip{
+  margin-top:1rem;font-size:.8rem;color:var(--muted);cursor:pointer;
+  animation:fadeUp .4s ease .75s both;text-align:center;
+}
+.ob-skip:hover{color:var(--text2)}
+
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+
+/* ── APP SHELL ──────────────────────────────── */
+.app-shell{display:none;flex-direction:column;min-height:100vh}
+.app-shell.visible{display:flex}
+
+.shell{
+  max-width:1100px;margin:0 auto;padding:1.5rem;
+  display:flex;flex-direction:column;gap:1.25rem;flex:1;
+  width:100%;
+}
+
+/* top bar */
+.top-bar{display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.logo{display:flex;align-items:center;gap:.6rem}
+.logo-dot{width:8px;height:8px;border-radius:50%;background:var(--indigo)}
+.logo-name{font-family:'Instrument Serif',serif;font-size:1.2rem;color:var(--text)}
+.logo-tag{font-size:.75rem;color:var(--muted);font-family:'DM Mono',monospace;margin-top:1px}
+
+/* steps strip */
+.steps-strip{
+  display:flex;gap:0;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:var(--r);
+  overflow:hidden;
+}
+.strip-step{
+  flex:1;padding:.85rem 1rem;
+  display:flex;align-items:center;gap:.6rem;
+  font-size:.83rem;font-weight:500;color:var(--muted);
+  position:relative;transition:color .2s;
+}
+.strip-step+.strip-step::before{content:'';position:absolute;left:0;top:22%;bottom:22%;width:1px;background:var(--border)}
+.strip-step.active{color:var(--text)}
+.strip-step.done{color:var(--emerald)}
+.sn{
+  width:22px;height:22px;border-radius:6px;
+  background:var(--surface2);border:1px solid var(--border);
+  display:grid;place-items:center;
+  font-size:.72rem;font-weight:600;font-family:'DM Mono',monospace;
+  flex-shrink:0;transition:all .2s;
+}
+.strip-step.active .sn{background:var(--indigo);border-color:var(--indigo);color:#fff}
+.strip-step.done .sn{background:var(--emerald-l);border-color:rgba(5,150,105,.25);color:var(--emerald)}
+
+/* layout grid */
+.content{display:grid;grid-template-columns:1fr 280px;gap:1.25rem;align-items:start}
+@media(max-width:768px){.content{grid-template-columns:1fr}.sidebar{order:-1}}
+
+/* card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r)}
+.card-head{
+  padding:.9rem 1.1rem;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  gap:.75rem;
+}
+.card-title{font-size:.9rem;font-weight:600;color:var(--text)}
+.card-sub{font-size:.78rem;color:var(--muted)}
+.card-body{padding:1.1rem}
+
+/* upload zone */
+.drop-zone{
+  border:1.5px dashed rgba(0,0,0,.12);
+  border-radius:10px;
+  padding:3rem 1.5rem;
+  text-align:center;cursor:pointer;
+  transition:border-color .2s,background .2s;
+}
+.drop-zone:hover,.drop-zone.drag-over{
+  border-color:var(--indigo);background:var(--indigo-m);
+}
+.drop-icon{
+  width:52px;height:52px;
+  margin:0 auto 1rem;
+  background:var(--indigo-l);
+  border-radius:14px;
+  display:grid;place-items:center;
+  animation:float 3s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.drop-icon svg{width:24px;height:24px;color:var(--indigo)}
+.drop-title{font-size:1rem;font-weight:600;margin-bottom:.3rem}
+.drop-sub{font-size:.83rem;color:var(--text2);margin-bottom:1.25rem}
+
+/* buttons */
+.btn{
+  display:inline-flex;align-items:center;gap:.45rem;
+  padding:.65rem 1.2rem;border-radius:100px;border:none;
+  font-family:'DM Sans',sans-serif;font-size:.85rem;font-weight:600;
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.btn-primary{background:var(--indigo);color:#fff}
+.btn-primary:hover:not(:disabled){background:#3d4ee6;transform:translateY(-1px)}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--border-md)}
+.btn-full{width:100%;justify-content:center}
+
+.btn-primary.glow{animation:btnGlow 2s ease-in-out infinite}
+@keyframes btnGlow{0%,100%{box-shadow:0 0 0 0 rgba(79,94,247,0)}50%{box-shadow:0 0 0 4px rgba(79,94,247,.18)}}
+
+/* upload progress */
+#uploadProgress{margin-top:.85rem;display:none}
+.up-label-row{display:flex;justify-content:space-between;font-size:.75rem;color:var(--text2);margin-bottom:.35rem}
+.bar-track{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.bar-fill{height:100%;background:var(--indigo);width:0%;transition:width .12s;border-radius:2px}
+
+/* previews */
+.previews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin-top:2px}
+.page-thumb{border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface2);transition:border-color .2s}
+.page-thumb:hover{border-color:rgba(79,94,247,.3)}
+.thumb-wrap{position:relative;aspect-ratio:3/4;cursor:crosshair;overflow:hidden}
+.thumb-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb-wrap canvas{position:absolute;inset:0;width:100%;height:100%;z-index:5;cursor:crosshair}
+.page-label{padding:.5rem .75rem;font-size:.72rem;font-family:'DM Mono',monospace;color:var(--muted);background:var(--surface);border-top:1px solid var(--border)}
+
+/* skeleton */
+.skel-card{height:280px;border-radius:10px;border:1px solid var(--border);
+  background:linear-gradient(90deg,var(--surface2) 25%,rgba(0,0,0,.03) 50%,var(--surface2) 75%);
+  background-size:200% 100%;animation:shimmer 1.4s infinite}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+/* sidebar */
+.sidebar{display:flex;flex-direction:column;gap:1rem}
+
+/* status */
+.status-row{display:flex;align-items:center;gap:.75rem;padding:.85rem 1.1rem}
+.s-dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background .3s}
+.s-dot.running{background:var(--sky);animation:pulseDot 1.4s infinite}
+.s-dot.done{background:var(--emerald)}
+.s-dot.error{background:var(--rose)}
+@keyframes pulseDot{0%,100%{opacity:1}50%{opacity:.35}}
+.s-main{font-size:.85rem;font-weight:600;color:var(--text)}
+.s-sub{font-size:.75rem;color:var(--muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini-prog-wrap{height:2px;background:var(--surface2);margin:0 1.1rem .9rem;border-radius:1px;overflow:hidden}
+.mini-prog{height:100%;background:var(--indigo);width:0%;transition:width .5s ease;border-radius:1px}
+
+/* selections */
+.sel-list{padding:0 1.1rem .9rem}
+.sel-empty{padding:.85rem;text-align:center;font-size:.78rem;color:var(--muted);background:var(--surface2);border-radius:8px;border:1px dashed var(--border)}
+.sel-item{display:flex;align-items:center;gap:.6rem;padding:.6rem .75rem;border-radius:8px;background:var(--surface2);margin-bottom:.4rem;font-size:.8rem;border:1px solid var(--border);transition:border-color .15s}
+.sel-item:hover{border-color:rgba(79,94,247,.25)}
+.sel-badge{padding:2px 8px;border-radius:4px;background:var(--indigo-l);color:var(--indigo);font-size:.7rem;font-weight:600;font-family:'DM Mono',monospace;flex-shrink:0}
+.sel-info{flex:1;color:var(--text2);font-family:'DM Mono',monospace;font-size:.72rem}
+.sel-del{width:20px;height:20px;border-radius:5px;background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer;display:grid;place-items:center;font-size:.8rem;transition:all .15s;flex-shrink:0}
+.sel-del:hover{background:var(--rose-l);border-color:rgba(225,29,72,.2);color:var(--rose)}
+.process-wrap{padding:0 1.1rem 1.1rem}
+
+/* popup */
+.popup{position:fixed;background:var(--surface);border:1px solid var(--border-md);border-radius:var(--r);padding:1rem;box-shadow:0 8px 32px rgba(0,0,0,.12);z-index:200;min-width:190px;display:none}
+.popup-title{font-size:.83rem;font-weight:600;margin-bottom:.75rem;color:var(--text)}
+.popup select{width:100%;padding:.55rem .75rem;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:.83rem;font-family:inherit;margin-bottom:.7rem;outline:none;transition:border-color .15s}
+.popup select:focus{border-color:var(--indigo)}
+.popup-btns{display:flex;gap:.5rem}
+.popup-btns button{flex:1;padding:.55rem;border-radius:7px;font-size:.8rem;font-family:'DM Sans',sans-serif;font-weight:600;cursor:pointer;transition:all .15s}
+.popup-save{background:var(--indigo);border:none;color:#fff}
+.popup-save:hover{background:#3d4ee6}
+.popup-cancel{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.popup-cancel:hover{border-color:var(--border-md);color:var(--text)}
+
+/* ══════════════════════════════════════════════
+   PROCESSING OVERLAY — step-by-step tracker
+══════════════════════════════════════════════ */
+.overlay{
+  position:fixed;inset:0;
+  background:rgba(247,246,243,.85);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  z-index:300;display:none;
+  align-items:center;justify-content:center;
+}
+.overlay.show{display:flex}
+
+.proc-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:2.5rem 2rem 2rem;
+  width:min(540px,92vw);
+  box-shadow:0 24px 80px rgba(0,0,0,.1);
+}
+
+.proc-header{text-align:center;margin-bottom:2rem}
+.proc-title{
+  font-family:'Instrument Serif',serif;
+  font-size:1.6rem;
+  color:var(--text);
+  margin-bottom:.35rem;
+}
+.proc-subtitle{font-size:.85rem;color:var(--text2)}
+
+/* step rows */
+.step-rows{display:flex;flex-direction:column;gap:.5rem;margin-bottom:1.75rem}
+.step-row{
+  display:flex;align-items:center;gap:.9rem;
+  padding:.7rem .85rem;
+  border-radius:10px;
+  border:1px solid var(--border);
+  background:var(--surface2);
+  transition:background .3s,border-color .3s;
+  position:relative;overflow:hidden;
+}
+.step-row.sr-active{
+  background:var(--indigo-l);
+  border-color:rgba(79,94,247,.22);
+}
+.step-row.sr-done{
+  background:var(--emerald-l);
+  border-color:rgba(5,150,105,.18);
+}
+.step-row.sr-error{
+  background:var(--rose-l);
+  border-color:rgba(225,29,72,.18);
+}
+
+/* shimmer sweep on active row */
+.step-row.sr-active::after{
+  content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 0%,rgba(79,94,247,.07) 50%,transparent 100%);
+  animation:rowSweep 2s linear infinite;
+}
+@keyframes rowSweep{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+
+.sr-icon{
+  width:32px;height:32px;border-radius:8px;
+  display:grid;place-items:center;flex-shrink:0;
+  background:rgba(0,0,0,.06);
+  transition:background .3s;
+}
+.step-row.sr-active .sr-icon{background:rgba(79,94,247,.15)}
+.step-row.sr-done .sr-icon{background:rgba(5,150,105,.15)}
+.step-row.sr-error .sr-icon{background:rgba(225,29,72,.12)}
+.sr-icon svg{width:16px;height:16px;color:var(--muted);transition:color .3s}
+.step-row.sr-active .sr-icon svg{color:var(--indigo)}
+.step-row.sr-done .sr-icon svg{color:var(--emerald)}
+.step-row.sr-error .sr-icon svg{color:var(--rose)}
+
+.sr-body{flex:1;min-width:0}
+.sr-name{font-size:.83rem;font-weight:600;color:var(--text2);transition:color .3s}
+.step-row.sr-active .sr-name{color:var(--indigo)}
+.step-row.sr-done .sr-name{color:var(--emerald)}
+.step-row.sr-error .sr-name{color:var(--rose)}
+.sr-msg{font-size:.72rem;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:240px}
+
+/* right side of step row */
+.sr-right{display:flex;flex-direction:column;align-items:flex-end;gap:2px;flex-shrink:0}
+.sr-time{font-family:'DM Mono',monospace;font-size:.7rem;color:var(--muted);transition:color .3s}
+.step-row.sr-active .sr-time{color:var(--indigo)}
+.step-row.sr-done .sr-time{color:var(--emerald)}
+
+/* spinner ring */
+.sr-spinner{
+  width:18px;height:18px;
+  border:2px solid rgba(79,94,247,.18);
+  border-top-color:var(--indigo);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+  flex-shrink:0;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.sr-check{
+  width:18px;height:18px;
+  background:var(--emerald-l);
+  border:1px solid rgba(5,150,105,.3);
+  border-radius:50%;
+  display:grid;place-items:center;
+  flex-shrink:0;
+}
+.sr-check svg{width:10px;height:10px;color:var(--emerald)}
+.sr-idle-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:var(--surface3);flex-shrink:0;
+}
+
+/* total progress */
+.proc-prog-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;margin-bottom:.65rem}
+.proc-prog-fill{height:100%;background:var(--indigo);width:0%;transition:width .5s ease;border-radius:2px}
+.proc-prog-row{display:flex;justify-content:space-between;font-size:.75rem;margin-bottom:1.25rem}
+.proc-prog-label{color:var(--text2);font-family:'DM Mono',monospace}
+.proc-prog-pct{color:var(--indigo);font-weight:600;font-family:'DM Mono',monospace}
+
+.proc-cancel{width:100%;justify-content:center;font-size:.82rem;padding:.6rem}
+
+/* ══════════════════════════════════════════════
+   DONE OVERLAY
+══════════════════════════════════════════════ */
+#doneOverlay{
+  position:fixed;inset:0;z-index:400;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(247,246,243,.75);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+}
+#doneOverlay.show{display:flex}
+
+.done-card{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:3rem 2.5rem;
+  text-align:center;
+  box-shadow:0 24px 80px rgba(0,0,0,.1);
+  width:min(420px,90vw);
+  animation:doneIn .6s cubic-bezier(.2,.9,.2,1) both;
+}
+@keyframes doneIn{from{opacity:0;transform:translateY(20px) scale(.97)}to{opacity:1;transform:none}}
+
+.done-check{
+  width:60px;height:60px;
+  background:var(--emerald-l);
+  border:1px solid rgba(5,150,105,.22);
+  border-radius:16px;
+  display:grid;place-items:center;
+  margin:0 auto 1.25rem;
+  animation:checkPop .5s cubic-bezier(.2,.9,.2,1) .15s both;
+}
+@keyframes checkPop{from{opacity:0;transform:scale(.5) rotate(-12deg)}to{opacity:1;transform:none}}
+.done-check svg{width:28px;height:28px;color:var(--emerald)}
+
+.done-title{font-family:'Instrument Serif',serif;font-size:2rem;margin-bottom:.5rem}
+.done-sub{font-size:.88rem;color:var(--text2);margin-bottom:2rem;line-height:1.6}
+
+.done-summary{
+  display:grid;grid-template-columns:1fr 1fr;gap:.6rem;margin-bottom:1.75rem;
+}
+.done-stat{
+  padding:.7rem .85rem;
+  background:var(--surface2);
+  border-radius:10px;border:1px solid var(--border);
+  text-align:left;
+}
+.done-stat-label{font-size:.7rem;color:var(--muted);margin-bottom:3px;font-family:'DM Mono',monospace}
+.done-stat-val{font-size:1rem;font-weight:600;color:var(--text)}
+
+.done-btn{
+  width:100%;padding:.9rem 1.5rem;
+  background:var(--indigo);color:#fff;
+  border:none;border-radius:100px;
+  font-family:'DM Sans',sans-serif;font-size:.95rem;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.5rem;
+  transition:background .15s,transform .15s;
+  animation:fadeUp .5s ease .4s both;
+}
+.done-btn:hover{background:#3d4ee6;transform:translateY(-1px)}
+.done-meta{margin-top:.85rem;font-size:.75rem;color:var(--muted);font-family:'DM Mono',monospace;animation:fadeUp .5s ease .55s both}
+
+#confettiCanvas{position:fixed;inset:0;pointer-events:none;z-index:401}
+
+input[type="file"]{display:none}
+
+/* locked state */
+.app-shell.slides-done .content,
+.app-shell.slides-done .steps-strip{
+  filter:blur(3px);opacity:.3;pointer-events:none;user-select:none;transition:all .6s ease;
+}
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+  <div class="ob-wordmark">Make Presentation Simpler</div>
+  <div class="ob-sub">PDF → Slides in seconds, powered by AI</div>
+
+  <div class="ob-steps">
+    <div class="ob-step-pill" id="obs1">
+      <svg class="ob-step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      Upload PDF
+    </div>
+    <span class="ob-arrow-mini">→</span>
+    <div class="ob-step-pill" id="obs2">
+      <svg class="ob-step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Mark Figures
+    </div>
+    <span class="ob-arrow-mini">→</span>
+    <div class="ob-step-pill" id="obs3">
+      <svg class="ob-step-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Get Slides
+    </div>
+  </div>
+
+  <button class="ob-cta-btn" id="obStart">Get started →</button>
+  <div class="ob-skip" id="obSkip">skip intro</div>
+</div>
+
+<!-- APP SHELL -->
+<div class="app-shell" id="appShell">
+  <div class="shell">
+
+    <!-- top bar -->
+    <header class="top-bar">
+      <div class="logo">
+        <div class="logo-dot"></div>
+        <div>
+          <div class="logo-name">MPS</div>
+          <div class="logo-tag">make presentation simpler</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost" id="clearBtn" style="display:none;font-size:.8rem;padding:.5rem 1rem">Reset</button>
+    </header>
+
+    <!-- steps strip -->
+    <div class="steps-strip">
+      <div class="strip-step active" id="step1"><div class="sn">1</div><span>Upload PDF</span></div>
+      <div class="strip-step" id="step2"><div class="sn">2</div><span>Mark Figures</span></div>
+      <div class="strip-step" id="step3"><div class="sn">3</div><span>Generate Slides</span></div>
+    </div>
+
+    <!-- content -->
+    <div class="content">
+
+      <!-- main card -->
+      <div class="card" id="mainCard">
+        <div class="card-head">
+          <div>
+            <div class="card-title" id="cardTitle">Upload your PDF</div>
+            <div class="card-sub" id="cardSub">Drag & drop or click to choose</div>
+          </div>
+        </div>
+        <div class="card-body" id="cardBody">
+          <div class="drop-zone" id="dropZone">
+            <div class="drop-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+            </div>
+            <div class="drop-title">Drop a PDF here</div>
+            <div class="drop-sub">or click to browse your files</div>
+            <button class="btn btn-primary" id="chooseBtn">Choose PDF</button>
+            <div id="uploadProgress">
+              <div class="up-label-row"><span id="upLabel">Preparing…</span><span id="upPct">0%</span></div>
+              <div class="bar-track"><div class="bar-fill" id="upBar"></div></div>
+            </div>
+          </div>
+          <div id="skeletonGrid" class="previews-grid" style="display:none">
+            <div class="skel-card"></div><div class="skel-card"></div><div class="skel-card"></div>
+          </div>
+          <div class="previews-grid" id="previewsGrid" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- sidebar -->
+      <aside class="sidebar">
+        <div class="card">
+          <div class="card-head"><div class="card-title">Status</div></div>
+          <div class="status-row">
+            <div class="s-dot" id="statusDot"></div>
+            <div class="status-text" style="flex:1;min-width:0">
+              <div class="s-main" id="statusMain">Idle</div>
+              <div class="s-sub" id="statusSub">Awaiting upload</div>
+            </div>
+          </div>
+          <div class="mini-prog-wrap"><div class="mini-prog" id="miniProg"></div></div>
+        </div>
+
+        <div class="card" id="selCard" style="display:none">
+          <div class="card-head">
+            <div class="card-title">Selections</div>
+            <div class="card-sub" id="selCount">0 regions</div>
+          </div>
+          <div class="sel-list" id="selList">
+            <div class="sel-empty" id="selEmpty">Draw boxes on page previews to mark figures & tables.</div>
+          </div>
+          <div class="process-wrap">
+            <button class="btn btn-primary btn-full" id="processBtn" disabled>Generate Slides</button>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<!-- popup -->
+<div class="popup" id="selPopup">
+  <div class="popup-title">Label this region</div>
+  <select id="selType">
+    <option value="figure">Figure / Chart</option>
+    <option value="table">Table</option>
+    <option value="diagram">Diagram</option>
+  </select>
+  <div class="popup-btns">
+    <button class="popup-save" id="popupSave">Save</button>
+    <button class="popup-cancel" id="popupCancel">Cancel</button>
+  </div>
+</div>
+
+<!-- PROCESSING OVERLAY -->
+<div class="overlay" id="overlay">
+  <div class="proc-card">
+    <div class="proc-header">
+      <div class="proc-title">Building your slides</div>
+      <div class="proc-subtitle" id="procSubtitle">Hang tight while we process your PDF…</div>
+    </div>
+
+    <!-- step rows -->
+    <div class="step-rows" id="stepRows">
+      <!-- injected by JS -->
+    </div>
+
+    <!-- total progress -->
+    <div class="proc-prog-track"><div class="proc-prog-fill" id="procProgFill"></div></div>
+    <div class="proc-prog-row">
+      <span class="proc-prog-label" id="procProgLabel">Starting…</span>
+      <span class="proc-prog-pct" id="procProgPct">0%</span>
+    </div>
+
+    <button class="btn btn-ghost proc-cancel btn-full" id="procCancel">Cancel</button>
+  </div>
+</div>
+
+<!-- DONE OVERLAY -->
+<canvas id="confettiCanvas"></canvas>
+<div id="doneOverlay">
+  <div class="done-card">
+    <div class="done-check">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="done-title">Slides ready!</div>
+    <div class="done-sub">Your presentation has been generated and is ready to share.</div>
+    <div class="done-summary" id="doneSummary">
+      <div class="done-stat"><div class="done-stat-label">TOTAL TIME</div><div class="done-stat-val" id="doneTime">—</div></div>
+      <div class="done-stat"><div class="done-stat-label">REGIONS</div><div class="done-stat-val" id="doneRegions">—</div></div>
+    </div>
+    <button class="done-btn" id="viewSlidesBtn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Open Presentation
+    </button>
+    <div class="done-meta">Link is sharable · Updates instantly</div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept="application/pdf"/>
+
+<script>
+/* ══════════════════════════════════════════════
+   ONBOARDING
+══════════════════════════════════════════════ */
+(function(){
+  const ob=document.getElementById('onboarding');
+  const pills=[document.getElementById('obs1'),document.getElementById('obs2'),document.getElementById('obs3')];
+  let si=0;
+  function cycle(){
+    pills.forEach(p=>p.removeAttribute('data-active'));
+    pills[si].setAttribute('data-active','');
+    si=(si+1)%pills.length;
+  }
+  setTimeout(cycle,400);
+  const t=setInterval(cycle,1600);
+
+  function launch(){
+    clearInterval(t);
+    ob.classList.add('fade-out');
+    setTimeout(()=>{
+      ob.style.display='none';
+      document.getElementById('appShell').classList.add('visible');
+      prepareUploadSlot();
+    },500);
+  }
+  document.getElementById('obStart').addEventListener('click',launch);
+  document.getElementById('obSkip').addEventListener('click',launch);
+})();
+
+/* ══════════════════════════════════════════════
+   CONFIG & STATE
+══════════════════════════════════════════════ */
+const API_BASE="https://li821zmmw4.execute-api.us-east-1.amazonaws.com/Prod";
+const url=p=>API_BASE.replace(/\/$/,'')+(!p.startsWith('/')?'/':'')+p;
+
+let uploadId=null,pdfKey=null,uploadUrl=null,viewerUrl=null;
+let uploadReady=false,uploadPrepPromise=null,prepTicker=null;
+let selections=[],pollTimer=null,isProcessing=false;
+let processStartTime=null;
+
+const $=id=>document.getElementById(id);
+const dropZone=$('dropZone'),chooseBtn=$('chooseBtn'),fileInput=$('fileInput');
+const clearBtn=$('clearBtn'),processBtn=$('processBtn');
+const previewsGrid=$('previewsGrid'),skeletonGrid=$('skeletonGrid');
+const selCard=$('selCard'),selList=$('selList'),selEmpty=$('selEmpty'),selCount=$('selCount');
+const selPopup=$('selPopup'),selType=$('selType'),popupSave=$('popupSave'),popupCancel=$('popupCancel');
+const overlay=$('overlay'),procProgFill=$('procProgFill'),procProgPct=$('procProgPct'),procProgLabel=$('procProgLabel');
+const procSubtitle=$('procSubtitle'),procCancel=$('procCancel');
+const upBar=$('upBar'),upPct=$('upPct'),upLabel=$('upLabel'),uploadProgress=$('uploadProgress');
+const miniProg=$('miniProg'),statusDot=$('statusDot'),statusMain=$('statusMain'),statusSub=$('statusSub');
+const cardTitle=$('cardTitle'),cardSub=$('cardSub');
+const doneOverlay=$('doneOverlay'),viewSlidesBtn=$('viewSlidesBtn');
+const appShell=$('appShell'),stepRows=$('stepRows');
+
+/* ══════════════════════════════════════════════
+   STEP TRACKER — the main feature
+══════════════════════════════════════════════ */
+const PIPELINE_STEPS=[
+  {id:'start',  label:'Initialising',     msg:'Starting pipeline…',       icon:svgPlay()},
+  {id:'crop',   label:'Cropping figures', msg:'Extracting regions…',       icon:svgCrop()},
+  {id:'ai',     label:'AI analysis',      msg:'Running vision models…',    icon:svgBolt()},
+  {id:'build',  label:'Building slides',  msg:'Writing output artifacts…', icon:svgSlides()},
+  {id:'cleanup',label:'Finishing up',     msg:'Cleaning up…',              icon:svgCheck()},
+];
+
+function svgPlay(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`}
+function svgCrop(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 2 6 8 2 8"/><polyline points="18 2 18 8 22 8"/><polyline points="6 22 6 16 2 16"/><polyline points="18 22 18 16 22 16"/></svg>`}
+function svgBolt(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`}
+function svgSlides(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>`}
+function svgCheck(){return`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`}
+
+// State for each step: 'idle'|'active'|'done'|'error'
+let stepState={};    // id -> 'idle'|'active'|'done'|'error'
+let stepStart={};    // id -> Date.now()
+let stepElapsed={};  // id -> seconds (when done)
+let stepMsg={};      // id -> latest message
+let stepTimerIds={}; // id -> interval for live clock
+
+function buildStepRows(){
+  stepRows.innerHTML='';
+  PIPELINE_STEPS.forEach(s=>{
+    stepState[s.id]='idle';
+    const row=document.createElement('div');
+    row.className='step-row';
+    row.id='sr-'+s.id;
+    row.innerHTML=`
+      <div class="sr-icon">${s.icon}</div>
+      <div class="sr-body">
+        <div class="sr-name">${s.label}</div>
+        <div class="sr-msg" id="srm-${s.id}">${s.msg}</div>
+      </div>
+      <div class="sr-right">
+        <div class="sr-time" id="srt-${s.id}">—</div>
+        <div id="sri-${s.id}"><div class="sr-idle-dot"></div></div>
+      </div>`;
+    stepRows.appendChild(row);
+  });
+}
+
+function setStepState(id, state, message){
+  if(!(id in stepState)) return;
+  const row=$('sr-'+id);
+  if(!row) return;
+
+  // clear live clock if going away from active
+  if(stepState[id]==='active' && state!=='active'){
+    if(stepTimerIds[id]) clearInterval(stepTimerIds[id]);
+    if(stepStart[id]) stepElapsed[id]=((Date.now()-stepStart[id])/1000).toFixed(1);
+  }
+
+  stepState[id]=state;
+  row.className='step-row'+(state==='active'?' sr-active':state==='done'?' sr-done':state==='error'?' sr-error':'');
+
+  if(message){
+    stepMsg[id]=message;
+    const msgEl=$('srm-'+id);
+    if(msgEl) msgEl.textContent=message;
+  }
+
+  const timeEl=$('srt-'+id);
+  const indEl=$('sri-'+id);
+
+  if(state==='active'){
+    stepStart[id]=Date.now();
+    // live elapsed counter
+    stepTimerIds[id]=setInterval(()=>{
+      if(timeEl) timeEl.textContent=((Date.now()-stepStart[id])/1000).toFixed(1)+'s';
+    },100);
+    if(timeEl) timeEl.textContent='0.0s';
+    if(indEl) indEl.innerHTML='<div class="sr-spinner"></div>';
+  } else if(state==='done'){
+    const elapsed=(stepElapsed[id]||'0.0')+'s';
+    if(timeEl) timeEl.textContent=elapsed;
+    if(indEl) indEl.innerHTML=`<div class="sr-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>`;
+  } else if(state==='error'){
+    if(timeEl) timeEl.textContent='✕';
+    if(indEl) indEl.innerHTML='<div style="width:8px;height:8px;border-radius:50%;background:var(--rose)"></div>';
+  } else {
+    if(timeEl) timeEl.textContent='—';
+    if(indEl) indEl.innerHTML='<div class="sr-idle-dot"></div>';
+  }
+}
+
+function resetAllSteps(){
+  PIPELINE_STEPS.forEach(s=>{
+    if(stepTimerIds[s.id]) clearInterval(stepTimerIds[s.id]);
+    stepState[s.id]='idle';stepStart[s.id]=null;stepElapsed[s.id]=null;stepMsg[s.id]=null;
+  });
+  buildStepRows();
+}
+
+let maxProg=0;
+function clampProgress(p){
+  const v=Number(p);
+  if(!Number.isFinite(v)) return maxProg;
+  maxProg=Math.max(maxProg,Math.max(0,Math.min(100,v)));
+  return maxProg;
+}
+
+function stageFromStatus(step,state,progress){
+  const s=String(step||'').toLowerCase();
+  const st=String(state||'').toLowerCase();
+  if(st==='done'||st==='cleaned'||s.includes('cleanup')) return 4;
+  if(s.includes('write_final_json')) return 3;
+  if(s.includes('call_model')||s.includes('generate_audio')) return 2;
+  if(s.includes('crop_figures')) return 1;
+  if(s.includes('start_processing')) return 0;
+  const p=Number(progress);
+  if(Number.isFinite(p)){if(p>=95)return 4;if(p>=85)return 3;if(p>=65)return 2;if(p>=50)return 1;}
+  return 0;
+}
+
+function updatePipelineFromStatus(data){
+  const idx=stageFromStatus(data.step,data.state,data.progress);
+  PIPELINE_STEPS.forEach((s,i)=>{
+    if(i<idx && stepState[s.id]!=='done') setStepState(s.id,'done');
+    else if(i===idx && stepState[s.id]!=='active') setStepState(s.id,'active',data.message||null);
+  });
+}
+
+/* ══════════════════════════════════════════════
+   UI HELPERS
+══════════════════════════════════════════════ */
+function setStatus(state,main,sub){
+  statusDot.className='s-dot'+(state?' '+state:'');
+  statusMain.textContent=main||'';
+  statusSub.textContent=sub||'';
+}
+function setProgress(pct){
+  const v=Math.max(0,Math.min(100,pct));
+  miniProg.style.width=v+'%';
+  procProgFill.style.width=v+'%';
+  procProgPct.textContent=v+'%';
+}
+function setStep(n){
+  ['step1','step2','step3'].forEach((id,i)=>{
+    const el=$(id);el.classList.remove('active','done');
+    if(i+1<n) el.classList.add('done');
+    if(i+1===n) el.classList.add('active');
+  });
+}
+function setUploadReady(r){
+  uploadReady=r;
+  chooseBtn.disabled=isProcessing;
+  chooseBtn.classList.toggle('glow',r&&!isProcessing);
+  dropZone.style.borderStyle=r?'dashed':'dashed';
+}
+function clearPrepTicker(){if(prepTicker) clearInterval(prepTicker);prepTicker=null;}
+
+/* ══════════════════════════════════════════════
+   UPLOAD FLOW
+══════════════════════════════════════════════ */
+async function prepareUploadSlot(){
+  if(uploadPrepPromise) return uploadPrepPromise;
+  setUploadReady(false);
+  uploadProgress.style.display='block';
+  upLabel.textContent='Preparing upload link…';upPct.textContent='0%';upBar.style.width='0%';
+  setStatus('running','Preparing…','Connecting to upload service');setProgress(3);
+  let sp=0;
+  clearPrepTicker();
+  prepTicker=setInterval(()=>{sp=Math.min(90,sp+(sp<60?8:3));upBar.style.width=sp+'%';upPct.textContent=sp+'%';},220);
+
+  uploadPrepPromise=(async()=>{
+    try{
+      const r=await fetch(url('/upload'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({filename:'upload.pdf',content_type:'application/pdf'})});
+      if(!r.ok) throw new Error('Server error '+r.status);
+      const d=await r.json();
+      uploadId=d.upload_id;pdfKey=d.pdf_key;uploadUrl=d.upload_url;
+      clearPrepTicker();upBar.style.width='100%';upPct.textContent='100%';upLabel.textContent='Ready';
+      setProgress(15);setStatus('','Ready','Choose a PDF to begin');setUploadReady(true);
+      setTimeout(()=>{if(uploadReady&&!isProcessing) uploadProgress.style.display='none';},700);
+      return d;
+    }catch(e){
+      clearPrepTicker();uploadId=null;pdfKey=null;uploadUrl=null;setUploadReady(false);
+      uploadProgress.style.display='block';upLabel.textContent='Failed';upPct.textContent='0%';upBar.style.width='0%';
+      setStatus('error','Could not prepare upload',e.message);throw e;
+    }finally{uploadPrepPromise=null;}
+  })();
+  return uploadPrepPromise;
+}
+
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag-over')});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop',e=>{
+  e.preventDefault();dropZone.classList.remove('drag-over');
+  const f=e.dataTransfer.files?.[0];
+  if(f&&(f.type==='application/pdf'||f.name.toLowerCase().endsWith('.pdf'))) startUpload(f);
+});
+chooseBtn.addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',e=>{const f=e.target.files?.[0];if(f) startUpload(f);e.target.value='';});
+
+async function startUpload(file){
+  if(!uploadReady){try{await prepareUploadSlot();}catch{return;}}
+  if(!uploadUrl||!uploadId||!pdfKey){setStatus('error','Not ready','Reload the page');return;}
+  uploadReady=false;chooseBtn.disabled=true;chooseBtn.classList.remove('glow');chooseBtn.textContent='Uploading…';
+  setStatus('running','Uploading…',file.name);setProgress(15);
+  uploadProgress.style.display='block';upLabel.textContent='Uploading…';upPct.textContent='0%';upBar.style.width='0%';
+  const xhr=new XMLHttpRequest();
+  xhr.open('PUT',uploadUrl,true);xhr.setRequestHeader('Content-Type',file.type||'application/pdf');
+  xhr.upload.onprogress=e=>{if(e.lengthComputable){const p=Math.round(e.loaded/e.total*100);upBar.style.width=p+'%';upPct.textContent=p+'%';setProgress(15+p*.1);}};
+  xhr.onload=()=>{if(xhr.status>=200&&xhr.status<300) uploadDone();else{setStatus('error','Upload failed','HTTP '+xhr.status);chooseBtn.disabled=false;chooseBtn.textContent='Choose PDF';chooseBtn.classList.add('glow');uploadReady=true;}};
+  xhr.onerror=()=>{setStatus('error','Upload failed','Network error');chooseBtn.disabled=false;chooseBtn.textContent='Choose PDF';chooseBtn.classList.add('glow');uploadReady=true;};
+  xhr.send(file);
+}
+
+async function uploadDone(){
+  setStatus('running','Processing…','Rendering previews');setProgress(25);
+  uploadProgress.style.display='none';
+  try{
+    const r=await fetch(url('/process/'+encodeURIComponent(uploadId)),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({upload_id:uploadId,pdf_key:pdfKey})});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+  }catch(e){setStatus('error','Failed to start',e.message);return;}
+  cardTitle.textContent='Processing your PDF…';cardSub.textContent='Rendering page previews';
+  clearBtn.style.display='block';skeletonGrid.style.display='grid';dropZone.style.display='none';
+  setStep(2);pollForPreviews();
+}
+
+function pollForPreviews(){
+  stopPoll();let att=0;
+  const tick=async()=>{
+    att++;
+    try{
+      const r=await fetch(url('/status/'+encodeURIComponent(uploadId)));
+      if(!r.ok) return;
+      const data=await r.json();
+      if(data.progress!==undefined) setProgress(data.progress);
+      if(data.previews&&data.previews.length>0){
+        stopPoll();skeletonGrid.style.display='none';renderPreviews(data.previews);
+        cardTitle.textContent='Mark figures & tables';
+        cardSub.textContent='Draw boxes around charts, images, or tables to include in slides';
+        setStatus('done','Previews ready','Draw boxes on pages');
+        selCard.style.display='block';return;
+      }
+      if(data.state==='error'){stopPoll();setStatus('error','Failed',data.message||'');skeletonGrid.style.display='none';}
+      if(att>120){stopPoll();setStatus('error','Timeout','Took too long');}
+    }catch{}
+  };
+  tick();pollTimer=setInterval(tick,2500);
+}
+
+function stopPoll(){if(pollTimer) clearInterval(pollTimer);pollTimer=null;}
+
+/* ══════════════════════════════════════════════
+   PREVIEWS & CANVAS DRAWING
+══════════════════════════════════════════════ */
+function renderPreviews(list){
+  previewsGrid.innerHTML='';
+  list.forEach(item=>{
+    const card=document.createElement('div');card.className='page-thumb';
+    const wrap=document.createElement('div');wrap.className='thumb-wrap';
+    const img=document.createElement('img');img.src=item.url||item.path;img.alt='Page '+item.page;img.crossOrigin='anonymous';
+    const canvas=document.createElement('canvas');
+    wrap.appendChild(img);wrap.appendChild(canvas);
+    const label=document.createElement('div');label.className='page-label';label.textContent='Page '+item.page;
+    card.appendChild(wrap);card.appendChild(label);previewsGrid.appendChild(card);
+    img.addEventListener('load',()=>initCanvas(canvas,img,item.page));
+    if(img.complete&&img.naturalWidth) initCanvas(canvas,img,item.page);
+  });
+  previewsGrid.style.display='grid';
+}
+
+const COLORS=['#4f5ef7','#0ea5e9','#059669','#d97706','#e11d48','#7c3aed'];
+function pageColor(p){return COLORS[(p-1)%COLORS.length];}
+let drawing=null,pending=null,allCanvases={};
+
+function initCanvas(canvas,img,page){
+  canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+  allCanvases[page]={canvas,img};redraw(page);
+  canvas.addEventListener('mousedown',e=>startDraw(e,page));
+  window.addEventListener('mousemove',e=>{if(drawing?.page===page) moveDraw(e,page);});
+  canvas.addEventListener('mouseup',()=>endDraw(page));
+  canvas.addEventListener('mouseleave',()=>endDraw(page));
+  canvas.addEventListener('touchstart',e=>startDraw(e,page),{passive:false});
+  window.addEventListener('touchmove',e=>{if(drawing?.page===page) moveDraw(e,page);},{passive:false});
+  canvas.addEventListener('touchend',()=>endDraw(page));
+}
+
+function coords(e,canvas,img){
+  const r=img.getBoundingClientRect();
+  const sx=canvas.width/r.width,sy=canvas.height/r.height;
+  const t=e.touches?e.touches[0]:e;
+  return{x:Math.max(0,Math.min(canvas.width,Math.round((t.clientX-r.left)*sx))),y:Math.max(0,Math.min(canvas.height,Math.round((t.clientY-r.top)*sy)))};
+}
+
+function startDraw(e,page){
+  e.preventDefault();
+  const{canvas,img}=allCanvases[page];
+  const p=coords(e,canvas,img);
+  drawing={page,startX:p.x,startY:p.y,rect:{x:p.x,y:p.y,w:0,h:0}};
+}
+function moveDraw(e,page){
+  if(!drawing) return;e.preventDefault();
+  const{canvas,img}=allCanvases[page];
+  const p=coords(e,canvas,img);
+  drawing.rect={x:Math.min(p.x,drawing.startX),y:Math.min(p.y,drawing.startY),w:Math.abs(p.x-drawing.startX),h:Math.abs(p.y-drawing.startY)};
+  redraw(page);
+}
+function endDraw(page){
+  if(!drawing||drawing.page!==page) return;
+  const r=drawing.rect;
+  if(r.w>6&&r.h>6){pending={page,...r};showPopup(allCanvases[page].img);}
+  drawing=null;redraw(page);
+}
+function redraw(page){
+  const{canvas,img}=allCanvases[page]||{};if(!canvas) return;
+  const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height);
+  const c=pageColor(page);
+  selections.filter(s=>s.page===page).forEach((s,i)=>drawBox(ctx,s.x,s.y,s.w,s.h,c,i+1,false));
+  if(drawing?.page===page&&drawing.rect.w>0) drawBox(ctx,drawing.rect.x,drawing.rect.y,drawing.rect.w,drawing.rect.h,c,'?',true);
+}
+function drawBox(ctx,x,y,w,h,color,label,draft){
+  ctx.save();
+  ctx.strokeStyle=color;ctx.lineWidth=draft?1.5:2.5;ctx.globalAlpha=draft?.5:1;
+  ctx.setLineDash(draft?[5,4]:[]);
+  ctx.strokeRect(x,y,w,h);ctx.fillStyle=color+(draft?'20':'18');ctx.fillRect(x,y,w,h);
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+  if(!draft){
+    const fs=Math.max(12,Math.min(20,w/8));
+    ctx.font=`bold ${fs}px DM Mono,monospace`;ctx.fillStyle='#fff';
+    ctx.fillRect(x+4,y+4,fs+8,fs+6);ctx.fillStyle=color;ctx.fillText(String(label),x+8,y+4+fs);
+  }
+  ctx.restore();
+}
+
+function showPopup(img){
+  const r=img.getBoundingClientRect();
+  selPopup.style.left=(r.left+r.width/2-95)+'px';
+  selPopup.style.top=Math.max(8,r.top+r.height/2-60)+'px';
+  selPopup.style.display='block';selType.focus();
+}
+
+popupSave.addEventListener('click',()=>{
+  if(!pending) return;
+  selections.push({...pending,type:selType.value});
+  pending=null;selPopup.style.display='none';
+  renderSelections();Object.keys(allCanvases).forEach(p=>redraw(Number(p)));
+});
+popupCancel.addEventListener('click',()=>{
+  pending=null;selPopup.style.display='none';
+  Object.keys(allCanvases).forEach(p=>redraw(Number(p)));
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&selPopup.style.display!=='none') popupCancel.click();});
+
+function renderSelections(){
+  selList.innerHTML='';
+  if(!selections.length){
+    selList.appendChild(selEmpty);selEmpty.style.display='block';
+    processBtn.disabled=true;selCount.textContent='0 regions';return;
+  }
+  selCount.textContent=selections.length+' region'+(selections.length!==1?'s':'');
+  processBtn.disabled=false;
+  selections.forEach((s,idx)=>{
+    const el=document.createElement('div');el.className='sel-item';
+    const badge=document.createElement('div');badge.className='sel-badge';badge.textContent=s.type;
+    const info=document.createElement('div');info.className='sel-info';info.textContent=`pg${s.page} · ${s.w}×${s.h}`;
+    const del=document.createElement('button');del.className='sel-del';del.textContent='✕';del.title='Remove';
+    del.addEventListener('click',()=>{selections.splice(idx,1);renderSelections();Object.keys(allCanvases).forEach(p=>redraw(Number(p)));});
+    el.append(badge,info,del);selList.appendChild(el);
+  });
+}
+
+/* ══════════════════════════════════════════════
+   PROCESS
+══════════════════════════════════════════════ */
+processBtn.addEventListener('click',async()=>{
+  if(!uploadId||!selections.length) return;
+  setStep(3);
+  maxProg=0;processStartTime=Date.now();
+  resetAllSteps();
+  procProgFill.style.width='0%';procProgPct.textContent='0%';
+  procSubtitle.textContent='Hang tight while we process your PDF…';
+  overlay.classList.add('show');
+  isProcessing=true;
+  setStepState('start','active','Starting pipeline…');
+
+  try{
+    const r=await fetch(url('/process/'+encodeURIComponent(uploadId)),{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({upload_id:uploadId,pdf_key:pdfKey,selections:selections.map(s=>({page:s.page,x:s.x,y:s.y,w:s.w,h:s.h,type:s.type}))})
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+  }catch(e){
+    overlay.classList.remove('show');
+    setStatus('error','Failed to start',e.message);isProcessing=false;return;
+  }
+  setStatus('running','Generating slides…','AI models working');
+  pollForCompletion();
+});
+
+function pollForCompletion(){
+  stopPoll();
+  const tick=async()=>{
+    try{
+      const r=await fetch(url('/status/'+encodeURIComponent(uploadId)));
+      if(!r.ok) return;
+      const data=await r.json();
+      if(data.progress!==undefined){
+        const p=clampProgress(data.progress);
+        setProgress(p);
+        procProgLabel.textContent=data.message||'Processing…';
+      }
+      updatePipelineFromStatus(data);
+      if(data.state==='done'||data.state==='cleaned'){
+        stopPoll();isProcessing=false;
+        // mark all steps done
+        PIPELINE_STEPS.forEach(s=>{ if(stepState[s.id]!=='done') setStepState(s.id,'done'); });
+        setProgress(100);
+        setStatus('done','Done!','Slides generated');
+        viewerUrl=data.viewer_url||data.viewer_key;
+        showDoneState();
+      }
+      if(data.state==='error'){
+        stopPoll();isProcessing=false;
+        overlay.classList.remove('show');
+        setStatus('error','Failed',data.message||'Unknown error');
+        PIPELINE_STEPS.forEach(s=>{ if(stepState[s.id]==='active') setStepState(s.id,'error'); });
+      }
+    }catch{}
+  };
+  tick();pollTimer=setInterval(tick,2500);
+}
+
+/* ══════════════════════════════════════════════
+   DONE STATE
+══════════════════════════════════════════════ */
+function showDoneState(){
+  setTimeout(()=>{
+    overlay.classList.remove('show');
+    appShell.classList.add('slides-done');
+    // populate stats
+    const totalSec=((Date.now()-processStartTime)/1000).toFixed(0);
+    $('doneTime').textContent=totalSec+'s';
+    $('doneRegions').textContent=selections.length;
+    doneOverlay.classList.add('show');
+    launchConfetti();
+  },800);
+}
+
+/* ══════════════════════════════════════════════
+   CONFETTI
+══════════════════════════════════════════════ */
+function launchConfetti(){
+  const canvas=$('confettiCanvas');
+  const ctx=canvas.getContext('2d');
+  canvas.width=window.innerWidth;canvas.height=window.innerHeight;
+  const colors=['#4f5ef7','#0ea5e9','#059669','#d97706','#e11d48','#7c3aed'];
+  const pieces=[];
+  for(let i=0;i<100;i++){
+    pieces.push({x:canvas.width/2+(Math.random()-.5)*160,y:canvas.height*.4,vx:(Math.random()-.5)*10,vy:Math.random()*-12-3,rot:Math.random()*360,rotV:(Math.random()-.5)*8,size:Math.random()*6+3,color:colors[Math.floor(Math.random()*colors.length)],shape:Math.random()>.5?'rect':'circle',alpha:1,gravity:Math.random()*.35+.25});
+  }
+  let raf;
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    let alive=false;
+    pieces.forEach(p=>{
+      p.x+=p.vx;p.y+=p.vy;p.vy+=p.gravity;p.rot+=p.rotV;p.vx*=.99;
+      if(p.y<canvas.height+20) alive=true;
+      if(p.y>canvas.height+10) return;
+      if(p.alpha>0.01&&p.y>canvas.height*.75) p.alpha-=.025;
+      ctx.save();ctx.globalAlpha=Math.max(0,p.alpha);ctx.translate(p.x,p.y);ctx.rotate(p.rot*Math.PI/180);ctx.fillStyle=p.color;
+      if(p.shape==='rect') ctx.fillRect(-p.size/2,-p.size/4,p.size,p.size/2);
+      else{ctx.beginPath();ctx.arc(0,0,p.size/2,0,Math.PI*2);ctx.fill();}
+      ctx.restore();
+    });
+    if(alive) raf=requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,canvas.width,canvas.height);
+  }
+  draw();
+}
+
+viewSlidesBtn.addEventListener('click',()=>{
+  if(viewerUrl) window.open(viewerUrl,'_blank');
+  else window.open(url('/viewer/'+encodeURIComponent(uploadId)),'_blank');
+});
+
+procCancel.addEventListener('click',()=>{
+  stopPoll();isProcessing=false;
+  PIPELINE_STEPS.forEach(s=>{ if(stepState[s.id]==='active') setStepState(s.id,'idle'); });
+  overlay.classList.remove('show');
+  setStatus('','Cancelled','Processing stopped');setStep(2);
+});
+
+clearBtn.addEventListener('click',()=>{
+  stopPoll();isProcessing=false;
+  uploadId=null;pdfKey=null;uploadUrl=null;viewerUrl=null;selections=[];maxProg=0;
+  previewsGrid.innerHTML='';previewsGrid.style.display='none';
+  skeletonGrid.style.display='none';dropZone.style.display='block';
+  uploadProgress.style.display='none';upBar.style.width='0%';
+  selCard.style.display='none';selList.innerHTML='';selList.appendChild(selEmpty);
+  selCount.textContent='0 regions';processBtn.disabled=true;clearBtn.style.display='none';
+  overlay.classList.remove('show');doneOverlay.classList.remove('show');
+  appShell.classList.remove('slides-done');
+  cardTitle.textContent='Upload your PDF';cardSub.textContent='Preparing a fresh upload link…';
+  setStatus('running','Preparing…','Connecting to upload service');
+  setProgress(0);setStep(1);
+  Object.keys(allCanvases).forEach(k=>delete allCanvases[k]);
+  uploadReady=false;chooseBtn.textContent='Preparing upload link…';
+  resetAllSteps();
+  prepareUploadSlot();
+});
+</script>
+</body>
+</html>

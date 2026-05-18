@@ -90,4 +90,13 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["CleanupDataFunction"]
 
+[function_build_definitions.9ca758db-4847-4e21-b331-48ff5820d7e9]
+packagetype = "Image"
+functions = ["GenerateAudioFunction"]
+
+[function_build_definitions.9ca758db-4847-4e21-b331-48ff5820d7e9.metadata]
+Dockerfile = "Dockerfile"
+DockerContext = "/home/yagami/bigssd/ppt_maker/functions/generate_audio"
+DockerTag = "python3.12-v1"
+
 [layer_build_definitions]

@@ -1,4 +1,5 @@
-import os, tempfile, boto3
+import os, tempfile, boto3, time
+from datetime import datetime, timezone
 from pathlib import Path
 import fitz
 
@@ -11,6 +12,8 @@ table    = dynamodb.Table(TABLE)
 def handler(event, context):
     upload_id = event["upload_id"]
     pdf_key   = event["pdf_key"]
+    started_at = datetime.now(timezone.utc).isoformat()
+    started_perf = time.perf_counter()
 
     with tempfile.TemporaryDirectory() as tmpdir:
         pdf_path = Path(tmpdir) / "input.pdf"
@@ -25,7 +28,7 @@ def handler(event, context):
 
     table.update_item(
         Key={"upload_id": upload_id},
-        UpdateExpression="SET #s = :s, step = :step, progress = :p, message = :m, text_key = :tk",
+        UpdateExpression="SET #s = :s, step = :step, progress = :p, message = :m, text_key = :tk, timing_extract_text = :tim",
         ExpressionAttributeNames={"#s": "state"},
         ExpressionAttributeValues={
             ":s":    "text_ready",
@@ -33,6 +36,12 @@ def handler(event, context):
             ":p":    40,
             ":m":    "Text extraction complete",
             ":tk":   text_key,
+            ":tim": {
+                "started_at": started_at,
+                "ended_at": datetime.now(timezone.utc).isoformat(),
+                "elapsed_ms": int(round((time.perf_counter() - started_perf) * 1000)),
+                "request_id": getattr(context, "aws_request_id", None),
+            },
         },
     )
 

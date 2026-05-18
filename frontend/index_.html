@@ -1515,45 +1515,79 @@ function clearPrepTicker() { if (prepTicker) clearInterval(prepTicker); prepTick
    PIPELINE ANIMATION
 ═══════════════════════════════════════════ */
 const pipelineStages = [
-  { node: 'pn-pdf',       conn: null,   label: 'Reading PDF…' },
+  { node: 'pn-pdf',       conn: null,   label: 'Starting processing…' },
   { node: 'pn-crop',      conn: 'pc-1', label: 'Cropping figures…' },
   { node: 'pn-ai',        conn: 'pc-2', label: 'Running AI models…' },
-  { node: 'pn-build',     conn: 'pc-3', label: 'Assembling Slides…' },
-  { node: 'pn-done-node', conn: 'pc-4', label: 'Finishing up…' },
+  { node: 'pn-build',     conn: 'pc-3', label: 'Writing final artifacts…' },
+  { node: 'pn-done-node', conn: 'pc-4', label: 'Cleaning up…' },
 ];
 
-let pipelineTimer = null;
-let pipelineIdx = 0;
+let maxObservedProgress = 0;
 
 function resetPipeline() {
   pipelineStages.forEach(s => {
     $(s.node).classList.remove('active','done');
     if (s.conn) { const c = $(s.conn); c.classList.remove('active','done'); }
   });
-  pipelineIdx = 0;
+  procStepLabel.textContent = 'Waiting for backend status…';
 }
 
-function advancePipeline() {
-  if (pipelineIdx > 0) {
-    const prev = pipelineStages[pipelineIdx-1];
-    $(prev.node).classList.remove('active'); $(prev.node).classList.add('done');
-    if (prev.conn) { const c=$(prev.conn); c.classList.remove('active'); c.classList.add('done'); }
+function clampProgress(pct) {
+  const v = Number(pct);
+  if (!Number.isFinite(v)) return maxObservedProgress;
+  maxObservedProgress = Math.max(maxObservedProgress, Math.max(0, Math.min(100, v)));
+  return maxObservedProgress;
+}
+
+function stageIndexFromStatus(step, state, progress) {
+  const s = String(step || '').toLowerCase();
+  const st = String(state || '').toLowerCase();
+
+  if (st === 'done' || st === 'cleaned') return 4;
+  if (s.includes('cleanup_data')) return 4;
+  if (s.includes('write_final_json')) return 3;
+  if (s.includes('call_model') || s.includes('generate_audio')) return 2;
+  if (s.includes('crop_figures')) return 1;
+  if (s.includes('start_processing')) return 0;
+
+  const p = Number(progress);
+  if (Number.isFinite(p)) {
+    if (p >= 95) return 4;
+    if (p >= 85) return 3;
+    if (p >= 65) return 2;
+    if (p >= 50) return 1;
   }
-  if (pipelineIdx >= pipelineStages.length) { clearInterval(pipelineTimer); return; }
-  const cur = pipelineStages[pipelineIdx];
-  $(cur.node).classList.add('active');
-  if (cur.conn) $(cur.conn).classList.add('active');
-  procStepLabel.textContent = cur.label;
-  pipelineIdx++;
+  return 0;
+}
+
+function updatePipelineFromStatus(data) {
+  const idx = stageIndexFromStatus(data.step, data.state, data.progress);
+  pipelineStages.forEach((stage, i) => {
+    const node = $(stage.node);
+    node.classList.remove('active', 'done');
+    if (stage.conn) {
+      const conn = $(stage.conn);
+      conn.classList.remove('active', 'done');
+    }
+
+    if (i < idx) {
+      node.classList.add('done');
+      if (stage.conn) $(stage.conn).classList.add('done');
+    } else if (i === idx) {
+      node.classList.add('active');
+      if (stage.conn) $(stage.conn).classList.add('active');
+    }
+  });
+
+  const fallback = pipelineStages[idx]?.label || 'Processing…';
+  procStepLabel.textContent = data.message || fallback;
 }
 
 function startPipelineAnimation() {
   resetPipeline();
-  advancePipeline();
-  pipelineTimer = setInterval(advancePipeline, 3500);
 }
 
-function stopPipelineAnimation() { if (pipelineTimer) clearInterval(pipelineTimer); }
+function stopPipelineAnimation() {}
 
 /* ═══════════════════════════════════════════
    CONFETTI
@@ -1903,6 +1937,7 @@ processBtn.addEventListener('click', async () => {
   setStep(3);
   overlay.classList.add('show');
   procProgBar.style.width='0%'; procPct.textContent='0%';
+  maxObservedProgress = 0;
   procTitle.textContent='Building your slides';
   procSub.textContent='Cropping figures, calling AI models, assembling slides…';
   isProcessing=true;
@@ -1929,7 +1964,9 @@ function pollForCompletion() {
       const r = await fetch(url('/status/'+encodeURIComponent(uploadId)));
       if (!r.ok) return;
       const data = await r.json();
-      if (data.progress!==undefined) setProgress(data.progress);
+      if (data.progress!==undefined) setProgress(clampProgress(data.progress));
+      updatePipelineFromStatus(data);
+      if (data.message) setStatus('running','Generating slides…',data.message);
       if (data.state==='done' || data.state==='cleaned') {
         stopPoll(); isProcessing=false;
         setProgress(100); setStatus('done','Done!','Slides generated successfully');

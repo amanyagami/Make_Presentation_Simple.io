@@ -38,7 +38,7 @@ def generate_multimodal_response(
     - image_paths_or_urls: list of local paths or http(s) URLs
     - final_json_string: validated JSON (string) following the user's slide schema
     """
-    client = InferenceClient(token=hf_token, provider=provider)
+    client = InferenceClient(token=hf_token, provider=provider, timeout=120)
 
     images_payload = [_image_to_b64(p) for p in image_paths_or_urls]
     images_placeholders = [f"<Image {i+1}>" for i in range(len(images_payload))]

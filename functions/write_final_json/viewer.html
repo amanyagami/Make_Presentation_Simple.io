@@ -396,9 +396,41 @@ function md(text) {
 function safeSrc(src) {
   if (!src) return null;
   try {
-    const u = new URL(src, location.href);
-    return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : null;
+    const raw = String(src).trim();
+    if (!raw) return null;
+
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      const u = new URL(raw);
+      return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : null;
+    }
+
+    if (raw.startsWith('/')) {
+      return new URL(raw, location.origin).href;
+    }
+
+    return new URL(raw, location.href).href;
   } catch { return null; }
+}
+
+function resolveImageRef(ref, uploadId) {
+  if (!ref) return null;
+  const raw = String(ref).trim();
+  if (!raw) return null;
+
+  // Backward compatibility for older model outputs.
+  const legacy = raw.match(/(?:^|\/)figure(\d+)\.(png|jpg|jpeg|webp)$/i);
+  if (raw.startsWith('/uploads/figures/') && legacy && uploadId) {
+    return safeSrc(`/uploads/${uploadId}/figure${legacy[1]}.${legacy[2].toLowerCase()}`);
+  }
+
+  return safeSrc(raw);
+}
+
+function resolveAudioUrl(urlOrKey) {
+  if (!urlOrKey) return null;
+  const raw = String(urlOrKey).trim();
+  if (!raw) return null;
+  return safeSrc(raw.startsWith('uploads/') ? `/${raw}` : raw);
 }
 
 /* ── State ─────────────────────────────────────── */
@@ -406,12 +438,17 @@ let allSlides   = [];   // DOM elements
 let slideIndex  = 0;
 let stepIndex   = -1;
 let currentSteps = [];
+let currentAudio = null;
+let manifestData = null;
+const stepAudioLookup = new Map();
 
 /* ── Build slide DOM ───────────────────────────── */
-function buildSlide(data, idx) {
+function buildSlide(data, idx, uploadId) {
   const el = document.createElement('div');
   el.className = 'slide';
   el.dataset.index = idx;
+  const slideNo = Number.isFinite(Number(data.order)) ? Number(data.order) : (idx + 1);
+  el.dataset.slideNo = String(slideNo);
 
   // Inner scroll area
   const inner = document.createElement('div');
@@ -439,7 +476,7 @@ function buildSlide(data, idx) {
 
   // Figure image
   if (data.image_ref) {
-    const src = safeSrc(data.image_ref);
+    const src = resolveImageRef(data.image_ref, uploadId);
     if (src) {
       const fig = document.createElement('div');
       fig.className = 'slide-fig';
@@ -459,6 +496,8 @@ function buildSlide(data, idx) {
     data.steps.forEach(step => {
       const li = document.createElement('li');
       li.className = 'step-item';
+      const stepNo = Number.isFinite(Number(step.number)) ? Number(step.number) : (ul.children.length + 1);
+      li.dataset.stepNo = String(stepNo);
       li.innerHTML = `
         <div class="step-num">${esc(String(step.number || ''))}</div>
         <div class="step-content">
@@ -512,16 +551,56 @@ function goTo(idx) {
   currentSteps = Array.from(next.querySelectorAll('.step-item'));
   currentSteps.forEach(s => s.classList.remove('visible'));
   stepIndex = -1;
+  if (currentAudio) {
+    currentAudio.pause();
+    currentAudio.currentTime = 0;
+  }
 
   updateCounter();
   updateDots();
   updateNavBtns();
 }
 
+function getStepAudio(slideNo, stepNo) {
+  const key = `${slideNo}:${stepNo}`;
+  if (stepAudioLookup.has(key)) return stepAudioLookup.get(key);
+
+  if (!manifestData) return null;
+  const mapKey = `slide${slideNo}_step${stepNo}`;
+  const fromMap = manifestData.audio_map?.[mapKey];
+  if (fromMap?.audio_url) return resolveAudioUrl(fromMap.audio_url);
+  if (fromMap?.audio_key) return resolveAudioUrl(fromMap.audio_key);
+  return null;
+}
+
+function playCurrentStepAudio() {
+  if (stepIndex < 0 || stepIndex >= currentSteps.length) return;
+
+  const activeSlide = allSlides[slideIndex];
+  if (!activeSlide) return;
+
+  const slideNo = Number(activeSlide.dataset.slideNo || (slideIndex + 1));
+  const stepNo = Number(currentSteps[stepIndex].dataset.stepNo || (stepIndex + 1));
+  const src = getStepAudio(slideNo, stepNo);
+  if (!src) return;
+
+  if (!currentAudio) {
+    currentAudio = new Audio();
+    currentAudio.preload = 'none';
+  }
+  if (currentAudio.src !== src) {
+    currentAudio.src = src;
+  } else {
+    currentAudio.currentTime = 0;
+  }
+  currentAudio.play().catch(() => {});
+}
+
 function showNextStep() {
   if (stepIndex < currentSteps.length - 1) {
     stepIndex++;
     currentSteps[stepIndex].classList.add('visible');
+    playCurrentStepAudio();
   } else if (slideIndex < allSlides.length - 1) {
     goTo(slideIndex + 1);
   }
@@ -611,6 +690,18 @@ async function init() {
     const r = await fetch('final.json', { cache: 'no-cache' });
     if (!r.ok) throw new Error('Could not load final.json — HTTP ' + r.status);
     const manifest = await r.json();
+    manifestData = manifest;
+
+    // Build slide/step -> audio URL lookup from speaker notes first.
+    for (const slideItem of (manifest.speaker_notes || [])) {
+      const slideNo = Number(slideItem?.slide);
+      for (const stepItem of (slideItem?.steps || [])) {
+        const stepNo = Number(stepItem?.step);
+        if (!Number.isFinite(slideNo) || !Number.isFinite(stepNo)) continue;
+        const fromStep = resolveAudioUrl(stepItem?.audio_url || stepItem?.audio_key);
+        if (fromStep) stepAudioLookup.set(`${slideNo}:${stepNo}`, fromStep);
+      }
+    }
 
     const rawSlides = manifest.slides || manifest;
     if (!Array.isArray(rawSlides) || rawSlides.length === 0) {
@@ -639,7 +730,7 @@ async function init() {
     dotsBar.style.cssText = 'position:absolute;top:-24px;left:50%;transform:translateX(-50%);';
 
     sorted.forEach((data, idx) => {
-      const slide = buildSlide(data, idx);
+      const slide = buildSlide(data, idx, manifest.upload_id);
       deck.appendChild(slide);
       allSlides.push(slide);
 

@@ -9,7 +9,6 @@ Parameters:
 
 Globals:
   Function:
-    Runtime: python3.12
     Timeout: 60
     MemorySize: 512
 
@@ -31,6 +30,7 @@ Resources:
   CreateUploadFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/create_upload/
       Handler: app.lambda_handler
       Environment:
@@ -49,20 +49,45 @@ Resources:
             Path: /upload
             Method: post
 
+  GenerateAudioFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      PackageType: Image
+      Timeout: 900
+      MemorySize: 2048
+      Environment:
+        Variables:
+          BUCKET: !Ref ArtifactBucket
+          TABLE: !Ref JobTable
+          PIPER_MODEL: en_US-ljspeech-high.onnx
+      Policies:
+        - S3CrudPolicy:
+            BucketName: !Ref ArtifactBucket
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobTable
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: functions/generate_audio
+      DockerTag: python3.12-v1
+
   StartPreprocessFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/start_preprocess/
       Handler: app.lambda_handler
       Environment:
         Variables:
           TABLE: !Ref JobTable
-          STATE_MACHINE_ARN: !Ref PreprocessStateMachine
+          PREPROCESS_STATE_MACHINE_ARN: !Ref PreprocessStateMachine
+          PROCESS_STATE_MACHINE_ARN: !Ref ProcessStateMachine
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref JobTable
         - StepFunctionsExecutionPolicy:
             StateMachineName: !GetAtt PreprocessStateMachine.Name
+        - StepFunctionsExecutionPolicy:
+            StateMachineName: !GetAtt ProcessStateMachine.Name
       Events:
         Api:
           Type: Api
@@ -73,6 +98,7 @@ Resources:
   StatusFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/status/
       Handler: app.lambda_handler
       Environment:
@@ -91,6 +117,7 @@ Resources:
   RenderPreviewsFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/render_previews/
       Handler: app.lambda_handler
       Environment:
@@ -106,6 +133,7 @@ Resources:
   ExtractTextFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/extract_text/
       Handler: app.lambda_handler
       Environment:
@@ -121,6 +149,7 @@ Resources:
   StartProcessingFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/start_processing/
       Handler: app.lambda_handler
       Environment:
@@ -142,6 +171,7 @@ Resources:
   CropFiguresFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/crop_figures/
       Handler: app.lambda_handler
       Environment:
@@ -157,6 +187,7 @@ Resources:
   CallModelFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/call_model/
       Handler: app.lambda_handler
       Timeout: 300
@@ -174,6 +205,7 @@ Resources:
   WriteFinalJsonFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/write_final_json/
       Handler: app.lambda_handler
       Environment:
@@ -189,6 +221,7 @@ Resources:
   CleanupDataFunction:
     Type: AWS::Serverless::Function
     Properties:
+      Runtime: python3.12
       CodeUri: functions/cleanup_data/
       Handler: app.lambda_handler
       Environment:
@@ -221,6 +254,7 @@ Resources:
       DefinitionSubstitutions:
         CropFiguresFunctionArn: !GetAtt CropFiguresFunction.Arn
         CallModelFunctionArn: !GetAtt CallModelFunction.Arn
+        GenerateAudioFunctionArn: !GetAtt GenerateAudioFunction.Arn
         WriteFinalJsonFunctionArn: !GetAtt WriteFinalJsonFunction.Arn
         CleanupDataFunctionArn: !GetAtt CleanupDataFunction.Arn
       Policies:
@@ -228,6 +262,8 @@ Resources:
             FunctionName: !Ref CropFiguresFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref CallModelFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref GenerateAudioFunction
         - LambdaInvokePolicy:
             FunctionName: !Ref WriteFinalJsonFunction
         - LambdaInvokePolicy:

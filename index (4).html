@@ -1,0 +1,1148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Deck Viewer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #07080d;
+  --surface: #0f1118;
+  --surface2: #161923;
+  --surface3: #1e2231;
+  --border: rgba(255,255,255,0.06);
+  --border-hover: rgba(255,255,255,0.12);
+  --text: #f0f2f8;
+  --text-muted: #5a6478;
+  --text-dim: #8391a8;
+  --accent: #4f7cff;
+  --accent-glow: rgba(79,124,255,0.15);
+  --accent2: #00d4aa;
+  --accent2-glow: rgba(0,212,170,0.12);
+  --step-active: #4f7cff;
+  --radius: 20px;
+  --radius-sm: 10px;
+  --transition: cubic-bezier(0.4,0,0.2,1);
+  --font: 'Sora', sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { height: 100%; }
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Ambient background ───────────── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 20% 10%, rgba(79,124,255,0.06) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 80%, rgba(0,212,170,0.04) 0%, transparent 60%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Top bar ──────────────────────── */
+.top-bar {
+  position: relative;
+  z-index: 20;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 20px;
+  background: rgba(15,17,24,0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+}
+
+.tb-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.tb-brand-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  animation: pulse-dot 2s ease infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
+}
+
+.tb-spacer { flex: 1; }
+
+.tb-counter {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  letter-spacing: 0.05em;
+}
+
+.tb-kbd-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  border: 1px solid var(--border-hover);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  background: var(--surface2);
+  color: var(--text-dim);
+}
+
+.tb-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--transition);
+  white-space: nowrap;
+  outline: none;
+}
+
+.tb-btn:hover {
+  border-color: var(--border-hover);
+  background: var(--surface3);
+}
+
+.tb-btn.autoplay-btn {
+  background: var(--accent);
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(79,124,255,0.35);
+}
+
+.tb-btn.autoplay-btn:hover {
+  background: #6090ff;
+  box-shadow: 0 2px 20px rgba(79,124,255,0.5);
+}
+
+.tb-btn.autoplay-btn.playing {
+  background: var(--surface3);
+  border-color: var(--border-hover);
+  color: var(--accent2);
+  box-shadow: none;
+}
+
+.tb-btn svg {
+  width: 14px; height: 14px;
+  flex-shrink: 0;
+}
+
+/* ── Progress bar ─────────────────── */
+.progress-bar-wrap {
+  position: relative;
+  z-index: 20;
+  height: 2px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  transition: width 0.45s var(--transition);
+  position: relative;
+}
+
+.progress-bar-fill::after {
+  content: '';
+  position: absolute;
+  right: 0; top: -2px;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent2);
+  box-shadow: 0 0 8px var(--accent2);
+}
+
+/* ── Stage ────────────────────────── */
+.stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px 24px 16px;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* ── Slide card ───────────────────── */
+.slide {
+  display: none;
+  position: absolute;
+  width: min(880px, 94vw);
+  max-height: calc(100vh - 120px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  flex-direction: column;
+  overflow: hidden;
+  will-change: transform, opacity;
+}
+
+.slide.active {
+  display: flex;
+  animation: slideEnter 400ms cubic-bezier(0.2,0.85,0.3,1) both;
+}
+
+.slide.exit {
+  display: flex;
+  animation: slideExit 280ms cubic-bezier(0.4,0,1,1) both;
+  pointer-events: none;
+}
+
+@keyframes slideEnter {
+  from { opacity: 0; transform: translateY(24px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes slideExit {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-16px) scale(0.97); }
+}
+
+/* ── Slide header band ────────────── */
+.slide-header {
+  flex-shrink: 0;
+  padding: 28px 32px 24px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(79,124,255,0.04) 0%, transparent 100%);
+}
+
+.slide-type-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 5px;
+  background: rgba(79,124,255,0.08);
+  border: 1px solid rgba(79,124,255,0.18);
+  font-size: 0.67rem;
+  font-weight: 600;
+  font-family: var(--mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 14px;
+}
+
+.slide-type-tag::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.7;
+}
+
+.slide-title {
+  font-size: clamp(1.4rem, 3.5vw, 2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.slide-subtitle {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.65;
+  max-width: 680px;
+}
+
+/* ── Slide body ───────────────────── */
+.slide-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 32px 24px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  min-height: 0;
+}
+
+.slide-body::-webkit-scrollbar { width: 3px; }
+.slide-body::-webkit-scrollbar-thumb { background: var(--border-hover); border-radius: 2px; }
+
+/* ── Figure ───────────────────────── */
+.slide-fig {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 20px;
+  width: 100%;
+  background: var(--surface2);
+}
+
+.slide-fig img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  max-height: 380px;
+}
+
+/* ── Steps ────────────────────────── */
+.steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.step-item {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  opacity: 0;
+  transform: translateX(-16px);
+  transition: opacity 0.38s var(--transition), transform 0.38s var(--transition), border-color 0.25s, background 0.25s, box-shadow 0.25s;
+  position: relative;
+  overflow: hidden;
+}
+
+.step-item::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  background: var(--accent);
+  transition: width 0.4s var(--transition);
+}
+
+.step-item.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.step-item.visible::before {
+  width: 2px;
+}
+
+.step-item.current-step {
+  border-color: rgba(79,124,255,0.3);
+  background: rgba(79,124,255,0.05);
+  box-shadow: 0 0 0 1px rgba(79,124,255,0.12) inset;
+}
+
+.step-item.current-step .step-num {
+  box-shadow: 0 0 16px rgba(79,124,255,0.4);
+}
+
+/* Step number badge */
+.step-num {
+  width: 34px; height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, rgba(79,124,255,0.9), rgba(79,124,255,0.5));
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 0.78rem;
+  font-family: var(--mono);
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: #fff;
+  border: 1px solid rgba(79,124,255,0.3);
+  transition: box-shadow 0.3s;
+}
+
+.step-content h3 {
+  font-size: 0.92rem;
+  font-weight: 600;
+  margin-bottom: 5px;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.step-content p {
+  font-size: 0.84rem;
+  color: var(--text-dim);
+  line-height: 1.65;
+}
+
+.step-content a { color: var(--accent2); text-decoration: none; }
+.step-content a:hover { text-decoration: underline; }
+.step-content strong { color: var(--text); font-weight: 600; }
+.step-content em { color: var(--accent2); font-style: italic; }
+
+/* Step pulse animation for current step */
+@keyframes step-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(79,124,255,0.4); }
+  70% { box-shadow: 0 0 0 8px rgba(79,124,255,0); }
+  100% { box-shadow: 0 0 0 0 rgba(79,124,255,0); }
+}
+
+.step-item.just-appeared .step-num {
+  animation: step-pulse 0.7s ease-out;
+}
+
+/* ── Step indicator ───────────────── */
+.step-progress-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.step-pip {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--border-hover);
+  transition: all 0.3s var(--transition);
+  flex: 1;
+  min-width: 16px;
+  max-width: 40px;
+}
+
+.step-pip.done {
+  background: rgba(79,124,255,0.4);
+}
+
+.step-pip.current {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(79,124,255,0.5);
+}
+
+/* ── Notes ────────────────────────── */
+.slide-notes {
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: rgba(0,212,170,0.04);
+  border: 1px solid rgba(0,212,170,0.1);
+  border-radius: 8px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+
+/* ── Footer ───────────────────────── */
+.slide-foot {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  border-top: 1px solid var(--border);
+  background: rgba(15,17,24,0.6);
+  backdrop-filter: blur(8px);
+  gap: 12px;
+}
+
+/* Dot nav */
+.prog-dots {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.prog-dot {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--border-hover);
+  transition: all 0.35s var(--transition);
+  cursor: pointer;
+  min-width: 4px;
+}
+
+.prog-dot.active {
+  background: var(--accent);
+  box-shadow: 0 0 8px rgba(79,124,255,0.45);
+}
+
+/* Arrow nav */
+.nav-btns { display: flex; gap: 6px; }
+
+.snav {
+  width: 34px; height: 34px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: all 0.18s var(--transition);
+  outline: none;
+  font-family: inherit;
+}
+
+.snav:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(79,124,255,0.08);
+}
+
+.snav:active:not(:disabled) { transform: scale(0.93); }
+.snav:disabled { opacity: 0.25; cursor: default; }
+
+/* ── Autoplay progress ring ───────── */
+.autoplay-ring {
+  display: none;
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 100;
+}
+
+.autoplay-ring.visible { display: block; }
+
+.autoplay-ring svg { transform: rotate(-90deg); }
+
+.ring-bg { fill: none; stroke: var(--surface3); stroke-width: 3; }
+.ring-fill {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 113; /* 2*pi*18 */
+  stroke-dashoffset: 113;
+  transition: stroke-dashoffset 0.1s linear;
+}
+
+/* ── Loading / Error ──────────────── */
+.center-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  position: relative;
+  z-index: 1;
+}
+
+.spinner {
+  width: 30px; height: 30px;
+  border: 2px solid var(--border-hover);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Fullscreen ───────────────────── */
+.stage.fullscreen {
+  padding: 0;
+  background: #000;
+}
+
+.stage.fullscreen .slide {
+  width: 100vw;
+  max-height: 100vh;
+  border-radius: 0;
+  border: none;
+}
+
+/* ── Mobile ───────────────────────── */
+@media (max-width: 640px) {
+  .stage { padding: 12px 10px 10px; }
+  .slide-header { padding: 20px 20px 18px; }
+  .slide-body { padding: 18px 20px; }
+  .slide-foot { padding: 10px 16px; }
+  .tb-kbd-hint { display: none; }
+  .top-bar { padding: 10px 14px; }
+  .slide { max-height: calc(100vh - 100px); }
+  .autoplay-ring { bottom: 14px; right: 14px; }
+}
+
+@media (max-width: 400px) {
+  .slide-title { font-size: 1.25rem; }
+  .tb-counter { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <div class="tb-brand">
+    <div class="tb-brand-dot"></div>
+    Deck Viewer
+  </div>
+  <div class="tb-spacer"></div>
+  <div class="tb-kbd-hint">
+    <kbd>←</kbd><kbd>→</kbd> slide &nbsp; <kbd>Space</kbd> step
+  </div>
+  <div class="tb-counter" id="counter">– / –</div>
+  <button class="tb-btn autoplay-btn" id="autoplayBtn" title="Auto-play presentation">
+    <svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 2.5l10 5.5-10 5.5V2.5z"/></svg>
+    Auto
+  </button>
+  <button class="tb-btn" id="fullscreenBtn" title="Fullscreen">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3"/></svg>
+  </button>
+</div>
+
+<!-- Thin progress bar -->
+<div class="progress-bar-wrap">
+  <div class="progress-bar-fill" id="progressFill" style="width:0%"></div>
+</div>
+
+<!-- Stage -->
+<div class="stage" id="stage">
+  <div class="center-state" id="loadingState">
+    <div class="spinner"></div>
+    <div style="font-size:0.85rem;">Loading slides…</div>
+  </div>
+</div>
+
+<!-- Autoplay countdown ring -->
+<div class="autoplay-ring" id="autoplayRing">
+  <svg width="40" height="40" viewBox="0 0 40 40">
+    <circle class="ring-bg" cx="20" cy="20" r="17"/>
+    <circle class="ring-fill" id="ringFill" cx="20" cy="20" r="17"/>
+    <text x="20" y="24" text-anchor="middle" fill="var(--text-dim)"
+      font-family="'JetBrains Mono',monospace" font-size="10" id="ringCount">4</text>
+  </svg>
+</div>
+
+<script>
+/* ── Util ─────────────────────────── */
+function esc(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function md(text) {
+  if (!text) return '';
+  return esc(text)
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/_([^_]+)_/g, '<em>$1</em>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
+    .replace(/\n/g, '<br>');
+}
+
+function safeSrc(src) {
+  if (!src) return null;
+  try {
+    const raw = String(src).trim();
+    if (!raw) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) {
+      const u = new URL(raw);
+      return (u.protocol === 'https:' || u.protocol === 'http:') ? u.href : null;
+    }
+    if (raw.startsWith('/')) return new URL(raw, location.origin).href;
+    return new URL(raw, location.href).href;
+  } catch { return null; }
+}
+
+function resolveImageRef(ref, uploadId) {
+  if (!ref) return null;
+  const raw = String(ref).trim();
+  if (!raw) return null;
+  const legacy = raw.match(/(?:^|\/)figure(\d+)\.(png|jpg|jpeg|webp)$/i);
+  if (raw.startsWith('/uploads/figures/') && legacy && uploadId)
+    return safeSrc(`/uploads/${uploadId}/figure${legacy[1]}.${legacy[2].toLowerCase()}`);
+  return safeSrc(raw);
+}
+
+function resolveAudioUrl(urlOrKey) {
+  if (!urlOrKey) return null;
+  const raw = String(urlOrKey).trim();
+  if (!raw) return null;
+  return safeSrc(raw.startsWith('uploads/') ? `/${raw}` : raw);
+}
+
+/* ── State ────────────────────────── */
+let allSlides = [];
+let slideIndex = 0;
+let stepIndex = -1;
+let currentSteps = [];
+let currentAudio = null;
+let manifestData = null;
+const stepAudioLookup = new Map();
+
+/* Autoplay */
+let autoplayActive = false;
+let autoplayTimer = null;
+let autoplayInterval = null;
+let autoplayCountdown = 0;
+const AUTOPLAY_DELAY_MS = 4000;
+const AUTOPLAY_STEP_MS = 2200;
+
+/* ── Build slide DOM ──────────────── */
+function buildSlide(data, idx, uploadId) {
+  const el = document.createElement('div');
+  el.className = 'slide';
+  el.dataset.index = idx;
+  const slideNo = Number.isFinite(Number(data.order)) ? Number(data.order) : (idx + 1);
+  el.dataset.slideNo = String(slideNo);
+
+  /* Header */
+  const header = document.createElement('div');
+  header.className = 'slide-header';
+
+  const tag = document.createElement('div');
+  tag.className = 'slide-type-tag';
+  tag.textContent = data.type || 'content';
+  header.appendChild(tag);
+
+  const h1 = document.createElement('h1');
+  h1.className = 'slide-title';
+  h1.textContent = data.title || 'Untitled';
+  header.appendChild(h1);
+
+  if (data.subtitle) {
+    const sub = document.createElement('p');
+    sub.className = 'slide-subtitle';
+    sub.textContent = data.subtitle;
+    header.appendChild(sub);
+  }
+
+  el.appendChild(header);
+
+  /* Body */
+  const body = document.createElement('div');
+  body.className = 'slide-body';
+
+  /* Figure */
+  if (data.image_ref) {
+    const src = resolveImageRef(data.image_ref, uploadId);
+    if (src) {
+      const fig = document.createElement('div');
+      fig.className = 'slide-fig';
+      const img = document.createElement('img');
+      img.src = src;
+      img.alt = data.title || 'Figure';
+      img.loading = 'lazy';
+      fig.appendChild(img);
+      body.appendChild(fig);
+    }
+  }
+
+  /* Step progress pips (built after we know step count) */
+  const steps = data.steps || [];
+  if (steps.length) {
+    const pips = document.createElement('div');
+    pips.className = 'step-progress-indicator';
+    pips.id = `pips_${idx}`;
+    steps.forEach(() => {
+      const pip = document.createElement('div');
+      pip.className = 'step-pip';
+      pips.appendChild(pip);
+    });
+    body.appendChild(pips);
+
+    const ul = document.createElement('ul');
+    ul.className = 'steps-list';
+    steps.forEach((step, si) => {
+      const li = document.createElement('li');
+      li.className = 'step-item';
+      const stepNo = Number.isFinite(Number(step.number)) ? Number(step.number) : (si + 1);
+      li.dataset.stepNo = String(stepNo);
+      li.dataset.stepIdx = si;
+      li.innerHTML = `
+        <div class="step-num">${esc(String(step.number || si + 1))}</div>
+        <div class="step-content">
+          <h3>${esc(step.heading || '')}</h3>
+          <p>${md(step.content || '')}</p>
+        </div>`;
+      ul.appendChild(li);
+    });
+    body.appendChild(ul);
+  } else if (data.notes) {
+    const p = document.createElement('p');
+    p.style.cssText = 'color:var(--text-dim);font-style:italic;font-size:0.9rem;';
+    p.textContent = data.notes;
+    body.appendChild(p);
+  }
+
+  if (data.notes && steps.length) {
+    const notes = document.createElement('div');
+    notes.className = 'slide-notes';
+    notes.innerHTML = md(data.notes);
+    body.appendChild(notes);
+  }
+
+  el.appendChild(body);
+
+  /* Footer */
+  const foot = document.createElement('div');
+  foot.className = 'slide-foot';
+
+  const dots = document.createElement('div');
+  dots.className = 'prog-dots';
+  dots.id = `dots_${idx}`;
+  foot.appendChild(dots);
+
+  const navBtns = document.createElement('div');
+  navBtns.className = 'nav-btns';
+  navBtns.innerHTML = `
+    <button class="snav" id="prevBtn_${idx}" title="Previous">←</button>
+    <button class="snav" id="nextBtn_${idx}" title="Next">→</button>`;
+  foot.appendChild(navBtns);
+
+  el.appendChild(foot);
+  return el;
+}
+
+/* ── Dot bar (shared, rendered into each slide's footer) ── */
+function renderDots(targetIdx) {
+  allSlides.forEach((slide, i) => {
+    const container = slide.querySelector(`#dots_${i}`);
+    if (!container) return;
+    container.innerHTML = '';
+    allSlides.forEach((_, j) => {
+      const dot = document.createElement('div');
+      dot.className = 'prog-dot' + (j === slideIndex ? ' active' : '');
+      const w = j === slideIndex ? '20px' : '4px';
+      dot.style.width = w;
+      dot.title = `Slide ${j + 1}`;
+      dot.addEventListener('click', e => { e.stopPropagation(); goTo(j); });
+      container.appendChild(dot);
+    });
+  });
+}
+
+/* ── Pips update ──────────────────── */
+function updatePips(slideEl) {
+  const pips = slideEl.querySelectorAll(`#pips_${slideEl.dataset.index} .step-pip`);
+  pips.forEach((pip, i) => {
+    pip.classList.remove('current', 'done');
+    if (i < stepIndex) pip.classList.add('done');
+    else if (i === stepIndex) pip.classList.add('current');
+  });
+}
+
+/* ── Navigation ───────────────────── */
+function goTo(idx, skipAnimation) {
+  const prev = allSlides[slideIndex];
+  if (prev && prev.classList.contains('active')) {
+    if (!skipAnimation) {
+      prev.classList.add('exit');
+      setTimeout(() => prev.classList.remove('active', 'exit'), 320);
+    } else {
+      prev.classList.remove('active');
+    }
+  }
+
+  slideIndex = Math.max(0, Math.min(idx, allSlides.length - 1));
+  const next = allSlides[slideIndex];
+  next.classList.add('active');
+
+  currentSteps = Array.from(next.querySelectorAll('.step-item'));
+  currentSteps.forEach(s => s.classList.remove('visible', 'current-step', 'just-appeared'));
+  stepIndex = -1;
+
+  if (currentAudio) { currentAudio.pause(); currentAudio.currentTime = 0; }
+
+  updateCounter();
+  renderDots(slideIndex);
+  updateNavBtnsState();
+  updateProgressBar();
+  updatePips(next);
+}
+
+function getStepAudio(slideNo, stepNo) {
+  const key = `${slideNo}:${stepNo}`;
+  if (stepAudioLookup.has(key)) return stepAudioLookup.get(key);
+  if (!manifestData) return null;
+  const mapKey = `slide${slideNo}_step${stepNo}`;
+  const fromMap = manifestData.audio_map?.[mapKey];
+  if (fromMap?.audio_url) return resolveAudioUrl(fromMap.audio_url);
+  if (fromMap?.audio_key) return resolveAudioUrl(fromMap.audio_key);
+  return null;
+}
+
+function playCurrentStepAudio() {
+  if (stepIndex < 0 || stepIndex >= currentSteps.length) return;
+  const activeSlide = allSlides[slideIndex];
+  if (!activeSlide) return;
+  const slideNo = Number(activeSlide.dataset.slideNo || (slideIndex + 1));
+  const stepNo = Number(currentSteps[stepIndex].dataset.stepNo || (stepIndex + 1));
+  const src = getStepAudio(slideNo, stepNo);
+  if (!src) return;
+  if (!currentAudio) { currentAudio = new Audio(); currentAudio.preload = 'none'; }
+  if (currentAudio.src !== src) currentAudio.src = src;
+  else currentAudio.currentTime = 0;
+  currentAudio.play().catch(() => {});
+}
+
+function showNextStep() {
+  if (stepIndex < currentSteps.length - 1) {
+    /* Unmark previous current */
+    if (stepIndex >= 0) currentSteps[stepIndex].classList.remove('current-step', 'just-appeared');
+
+    stepIndex++;
+    const item = currentSteps[stepIndex];
+    item.classList.add('visible', 'current-step', 'just-appeared');
+    /* Remove just-appeared after animation */
+    setTimeout(() => item.classList.remove('just-appeared'), 800);
+
+    updatePips(allSlides[slideIndex]);
+    playCurrentStepAudio();
+  } else if (slideIndex < allSlides.length - 1) {
+    /* Unmark last step on current slide */
+    if (stepIndex >= 0 && currentSteps[stepIndex])
+      currentSteps[stepIndex].classList.remove('current-step');
+    goTo(slideIndex + 1);
+  }
+}
+
+function showPrevStep() {
+  if (stepIndex >= 0) {
+    currentSteps[stepIndex].classList.remove('visible', 'current-step', 'just-appeared');
+    stepIndex--;
+    if (stepIndex >= 0) {
+      currentSteps[stepIndex].classList.add('current-step');
+    }
+    updatePips(allSlides[slideIndex]);
+  } else if (slideIndex > 0) {
+    goTo(slideIndex - 1);
+    setTimeout(() => {
+      currentSteps.forEach(s => s.classList.add('visible'));
+      stepIndex = currentSteps.length - 1;
+      if (stepIndex >= 0) currentSteps[stepIndex].classList.add('current-step');
+      updatePips(allSlides[slideIndex]);
+    }, 60);
+  }
+}
+
+function updateCounter() {
+  document.getElementById('counter').textContent = `${slideIndex + 1} / ${allSlides.length}`;
+}
+
+function updateProgressBar() {
+  const pct = allSlides.length <= 1 ? 100 : (slideIndex / (allSlides.length - 1)) * 100;
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function updateNavBtnsState() {
+  allSlides.forEach((slide, i) => {
+    const prev = slide.querySelector(`#prevBtn_${i}`);
+    const next = slide.querySelector(`#nextBtn_${i}`);
+    if (prev) prev.disabled = slideIndex === 0 && stepIndex <= 0;
+    if (next) next.disabled = false;
+  });
+}
+
+/* ── Autoplay ─────────────────────── */
+function startAutoplay() {
+  autoplayActive = true;
+  const btn = document.getElementById('autoplayBtn');
+  btn.classList.add('playing');
+  btn.querySelector('svg').innerHTML = '<rect x="3" y="3" width="4" height="10" rx="1"/><rect x="9" y="3" width="4" height="10" rx="1"/>';
+  btn.childNodes[btn.childNodes.length - 1].textContent = 'Pause';
+  document.getElementById('autoplayRing').classList.add('visible');
+  scheduleAutoplayNext();
+}
+
+function stopAutoplay() {
+  autoplayActive = false;
+  clearTimeout(autoplayTimer);
+  clearInterval(autoplayInterval);
+  autoplayTimer = null;
+  autoplayInterval = null;
+  const btn = document.getElementById('autoplayBtn');
+  btn.classList.remove('playing');
+  btn.querySelector('svg').innerHTML = '<path d="M3 2.5l10 5.5-10 5.5V2.5z"/>';
+  btn.childNodes[btn.childNodes.length - 1].textContent = 'Auto';
+  document.getElementById('autoplayRing').classList.remove('visible');
+}
+
+function scheduleAutoplayNext() {
+  clearTimeout(autoplayTimer);
+  clearInterval(autoplayInterval);
+
+  const delay = (stepIndex < 0 && currentSteps.length === 0) ? AUTOPLAY_DELAY_MS : AUTOPLAY_STEP_MS;
+  const ringFill = document.getElementById('ringFill');
+  const ringCount = document.getElementById('ringCount');
+  const circumference = 113;
+
+  autoplayCountdown = delay;
+  const startTime = Date.now();
+
+  autoplayInterval = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, delay - elapsed);
+    const fraction = remaining / delay;
+    ringFill.style.strokeDashoffset = circumference * fraction;
+    ringCount.textContent = Math.ceil(remaining / 1000);
+  }, 80);
+
+  autoplayTimer = setTimeout(() => {
+    clearInterval(autoplayInterval);
+    if (!autoplayActive) return;
+
+    const atLastSlide = slideIndex >= allSlides.length - 1;
+    const atLastStep = stepIndex >= currentSteps.length - 1;
+
+    if (atLastSlide && atLastStep) {
+      stopAutoplay();
+      return;
+    }
+
+    showNextStep();
+    scheduleAutoplayNext();
+  }, delay);
+}
+
+function toggleAutoplay() {
+  if (autoplayActive) stopAutoplay();
+  else startAutoplay();
+}
+
+/* ── Keyboard & clicks ────────────── */
+document.addEventListener('keydown', e => {
+  const tag = e.target.tagName.toLowerCase();
+  if (['input','textarea','select','button'].includes(tag)) return;
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') {
+    e.preventDefault(); showNextStep();
+    if (autoplayActive) { clearTimeout(autoplayTimer); clearInterval(autoplayInterval); scheduleAutoplayNext(); }
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault(); showPrevStep();
+    if (autoplayActive) { clearTimeout(autoplayTimer); clearInterval(autoplayInterval); scheduleAutoplayNext(); }
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault(); goTo(slideIndex - 1);
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault(); goTo(slideIndex + 1);
+  } else if (e.key === 'Escape' && autoplayActive) {
+    stopAutoplay();
+  }
+});
+
+document.getElementById('stage').addEventListener('click', e => {
+  const tag = e.target.tagName.toLowerCase();
+  if (['a','button','input','select'].includes(tag)) return;
+  showNextStep();
+  if (autoplayActive) { clearTimeout(autoplayTimer); clearInterval(autoplayInterval); scheduleAutoplayNext(); }
+});
+
+document.getElementById('autoplayBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  toggleAutoplay();
+});
+
+/* ── Fullscreen ───────────────────── */
+document.getElementById('fullscreenBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const stage = document.getElementById('stage');
+  if (!document.fullscreenElement) stage.requestFullscreen?.();
+  else document.exitFullscreen?.();
+});
+
+document.addEventListener('fullscreenchange', () => {
+  const stage = document.getElementById('stage');
+  stage.classList.toggle('fullscreen', !!document.fullscreenElement);
+  const btn = document.getElementById('fullscreenBtn');
+  btn.querySelector('svg').innerHTML = document.fullscreenElement
+    ? '<path d="M5 9H2v5h5v-3M11 9h3v5h-5v-3M9 5v-3H4v5h3M9 11v3h5v-5h-3" stroke="currentColor" stroke-width="1.5" fill="none"/>'
+    : '<path d="M2 5V2h3M11 2h3v3M14 11v3h-3M5 14H2v-3" stroke="currentColor" stroke-width="1.5" fill="none"/>';
+});
+
+/* ── Init ─────────────────────────── */
+async function init() {
+  const stage = document.getElementById('stage');
+
+  try {
+    const r = await fetch('final.json', { cache: 'no-cache' });
+    if (!r.ok) throw new Error('Could not load final.json — HTTP ' + r.status);
+    const manifest = await r.json();
+    manifestData = manifest;
+
+    for (const slideItem of (manifest.speaker_notes || [])) {
+      const slideNo = Number(slideItem?.slide);
+      for (const stepItem of (slideItem?.steps || [])) {
+        const stepNo = Number(stepItem?.step);
+        if (!Number.isFinite(slideNo) || !Number.isFinite(stepNo)) continue;
+        const fromStep = resolveAudioUrl(stepItem?.audio_url || stepItem?.audio_key);
+        if (fromStep) stepAudioLookup.set(`${slideNo}:${stepNo}`, fromStep);
+      }
+    }
+
+    const rawSlides = manifest.slides || manifest;
+    if (!Array.isArray(rawSlides) || rawSlides.length === 0)
+      throw new Error('No slides found in final.json');
+
+    const sorted = rawSlides.slice().sort((a, b) => {
+      const oa = Number(a.order), ob = Number(b.order);
+      if (!isFinite(oa) && !isFinite(ob)) return 0;
+      if (!isFinite(oa)) return 1;
+      if (!isFinite(ob)) return -1;
+      return oa - ob;
+    });
+
+    stage.innerHTML = '';
+
+    const deck = document.createElement('div');
+    deck.style.cssText = 'position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;';
+
+    sorted.forEach((data, idx) => {
+      const slide = buildSlide(data, idx, manifest.upload_id);
+      deck.appendChild(slide);
+      allSlides.push(slide);
+
+      const prev = slide.querySelector(`#prevBtn_${idx}`);
+      const next = slide.querySelector(`#nextBtn_${idx}`);
+      if (prev) prev.addEventListener('click', e => { e.stopPropagation(); showPrevStep(); });
+      if (next) next.addEventListener('click', e => { e.stopPropagation(); showNextStep(); });
+    });
+
+    stage.appendChild(deck);
+    goTo(0);
+
+  } catch(err) {
+    stage.innerHTML = `
+      <div class="center-state">
+        <div style="font-size:2.5rem;opacity:0.5;">⚠</div>
+        <div style="font-weight:600;color:var(--text);font-size:0.95rem;">Failed to load slides</div>
+        <div style="font-size:0.82rem;color:var(--text-muted);max-width:340px;line-height:1.6;">${esc(err.message)}</div>
+        <button class="tb-btn" onclick="location.reload()" style="margin-top:8px;">↻ Retry</button>
+      </div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,4 +1,5 @@
-import os, tempfile, boto3
+import os, tempfile, boto3, time
+from datetime import datetime, timezone
 from pathlib import Path
 from PIL import Image
 
@@ -11,6 +12,8 @@ table    = dynamodb.Table(TABLE)
 def handler(event, context):
     upload_id  = event["upload_id"]
     selections = event["selections"]  # [{page, x, y, w, h, type}]
+    started_at = datetime.now(timezone.utc).isoformat()
+    started_perf = time.perf_counter()
 
     figures = []
 
@@ -39,13 +42,20 @@ def handler(event, context):
 
     table.update_item(
         Key={"upload_id": upload_id},
-        UpdateExpression="SET #s = :s, step = :step, progress = :p, message = :m",
+        UpdateExpression="SET #s = :s, step = :step, progress = :p, message = :m, timing_crop_figures = :tim",
         ExpressionAttributeNames={"#s": "state"},
         ExpressionAttributeValues={
             ":s":    "figures_ready",
             ":step": "crop_figures",
             ":p":    55,
             ":m":    f"Cropped {len(figures)} figure(s)",
+            ":tim": {
+                "started_at": started_at,
+                "ended_at": datetime.now(timezone.utc).isoformat(),
+                "elapsed_ms": int(round((time.perf_counter() - started_perf) * 1000)),
+                "request_id": getattr(context, "aws_request_id", None),
+                "figures": len(figures),
+            },
         },
     )
 
